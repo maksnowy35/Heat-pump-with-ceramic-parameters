@@ -3,7 +3,8 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import {
-  BlocksResponse, Candidate, CopParams, Coverage, CumulativeResponse, DatasetInfo, PhasePlan, PhasePreview,
+  BlocksResponse, Candidate, CopTPoint, ModbusExchange, ModbusStatus, NtcResponse, RegeneratorRequest,
+  RegeneratorResponse, ScanHit, CopParams, Coverage, CumulativeResponse, DatasetInfo, PhasePlan, PhasePreview,
   PhaseSuggestion, WindowResponse,
 } from './models';
 
@@ -58,5 +59,33 @@ export class Api {
 
   suggestWindows(id: string, minutes = 30, n = 8): Observable<Candidate[]> {
     return this.http.get<Candidate[]>(`${this.base}/datasets/${id}/windows/suggest`, { params: { minutes, n } });
+  }
+
+  copVsTout(id: string, cop: CopParams, windows: string[] | null = null): Observable<CopTPoint[]> {
+    return this.http.post<CopTPoint[]>(`${this.base}/datasets/${id}/cop-vs-tout`, { cop, windows });
+  }
+
+  ntc(body: { table?: [number, number][] | null; resistance?: number | null; current_ma?: number | null; supply_v?: number }): Observable<NtcResponse> {
+    return this.http.post<NtcResponse>(`${this.base}/ntc`, body);
+  }
+
+  modbusStatus(): Observable<ModbusStatus> {
+    return this.http.get<ModbusStatus>(`${this.base}/modbus`);
+  }
+
+  modbusRead(unit: number, kind: string, address: number, count: number): Observable<ModbusExchange> {
+    return this.http.post<ModbusExchange>(`${this.base}/modbus/read`, { unit, kind, address, count });
+  }
+
+  modbusWrite(unit: number, address: number, value: number): Observable<ModbusExchange> {
+    return this.http.post<ModbusExchange>(`${this.base}/modbus/write`, { unit, address, value });
+  }
+
+  modbusScan(unitFrom: number, unitTo: number, address: number): Observable<ScanHit[]> {
+    return this.http.post<ScanHit[]>(`${this.base}/modbus/scan`, { unit_from: unitFrom, unit_to: unitTo, address });
+  }
+
+  regenerator(req: RegeneratorRequest): Observable<RegeneratorResponse> {
+    return this.http.post<RegeneratorResponse>(`${this.base}/regenerator`, req);
   }
 }

@@ -1,0 +1,58 @@
+.link-state {
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 0.9rem;
+  margin: 0 0 1.4rem;
+
+  &.sim {
+    border-left: 3px solid var(--ochre);
+  }
+
+  code {
+    font-size: 0.85rem;
+  }
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem 1.1rem;
+  min-width: 0;
+
+  h2 {
+    font-size: 1.15rem;
+  }
+}
+
+.row {
+  display: flex;
+  gap: 0.6rem;
+
+  .field {
+    flex: 1;
+    min-width: 0;
+  }
+
+  input {
+    width: 100%;
+  }
+}
+
+.segmented {
+  margin-bottom: 0.7rem;
+}
+
+.hits {
+  padding-left: 1.1rem;
+  margin: 0.7rem 0 0;
+}

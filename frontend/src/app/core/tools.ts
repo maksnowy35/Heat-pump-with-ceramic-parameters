@@ -162,6 +162,96 @@ export const TOOLS: ToolInfo[] = [
     ],
     scripts: ['cop_blokowe30minTEST.py', 'cop_blok30min_nowszy.py'],
   },
+  {
+    id: 'cop-tout',
+    title: 'COP against outdoor temperature',
+    route: '/cop',
+    group: 'analysis',
+    lead: 'One point per steady window: how the COP changes with T3.',
+    what:
+      'The summary of the window analysis (section 4.3 of the thesis, Fig. 15 of the paper): the mean block COP of each ' +
+      'steady window against its mean outdoor temperature.',
+    how: [
+      'By default the steady windows proposed for the record are used, spread over its T3 range.',
+      'Each point is the mean over the complete, trusted 2-minute blocks of the window.',
+      'Grey bars: the COP ranges read from the measured windows in section 4.3 of the thesis, for comparison.',
+    ],
+    formulas: ['COP_window = mean(COP_block)   over trusted, complete blocks'],
+    scripts: ['the summary table in section 4.3, made by hand from the block plots'],
+  },
+  {
+    id: 'ntc',
+    title: 'NTC characteristic',
+    route: '/ntc',
+    group: 'lab',
+    lead: 'Temperature from the resistance of an NTC thermistor: table, Beta and Steinhart–Hart.',
+    what:
+      'The air temperatures are measured with NTC thermistors. This tool turns a measured current or resistance into ' +
+      'a temperature and compares the ways of reading the R–T characteristic.',
+    how: [
+      'Default: the 5 kΩ (Tn5) table of the original script, −20…100 °C. Paste another table as "t; R" lines.',
+      'Linear: straight lines between table points in R, as the script did; clamped to the ends of the table.',
+      'Logarithmic: straight lines in ln R against 1/T, i.e. a Beta curve per interval; exact at the table points and the right shape in between.',
+      'Beta and Steinhart–Hart are fitted to the whole table by least squares.',
+      'B constants are computed from the table and compared with the datasheet.',
+    ],
+    formulas: [
+      'R = U / I',
+      'R = R₂₅ · exp(B·(1/T − 1/T₂₅))',
+      '1/T = A + B·ln R + C·(ln R)³',
+      'B₂₅/ₓ = ln(R₂₅/Rₓ) / (1/T₂₅ − 1/Tₓ)',
+    ],
+    scripts: ['NTC5k_characterisitc.py'],
+    note:
+      'Between table points 10 K apart, linear interpolation in R reads 0.4–0.7 K too warm, because R falls exponentially ' +
+      'with temperature. That is more than the ±0.425 K class B tolerance of the sensors; interpolating ln R against 1/T removes it.',
+  },
+  {
+    id: 'modbus',
+    title: 'Modbus RTU',
+    route: '/modbus',
+    group: 'lab',
+    lead: 'Find the controller on the RS-485 bus, read and write its registers, see every frame.',
+    what:
+      'The logger reads the controller over Modbus RTU. These are the two helper scripts used while setting it up: ' +
+      'a scan for the unit id and a read/write of single registers.',
+    how: [
+      'Scan: for every unit id in the range, read one input register, then one holding register; the first answer wins.',
+      'Read: function 04 (input) or 03 (holding), any address and count.',
+      'Write: function 06, one holding register; the controller echoes the request.',
+      'Every request and response is shown byte by byte, with the CRC-16/MODBUS.',
+      'Without a serial port configured (MODBUS_PORT), the API answers from a simulated controller at unit id 1. On a real port writing is off unless MODBUS_ALLOW_WRITE=1.',
+    ],
+    formulas: [
+      'request = [unit][function][address hi lo][count hi lo][CRC lo hi]',
+      'CRC-16/MODBUS: init 0xFFFF, polynomial 0xA001 (reflected)',
+    ],
+    scripts: ['szukanie_modnusa.py', 'Zmiana_rejestrow.py'],
+  },
+  {
+    id: 'regenerator',
+    title: 'Ceramic regenerator',
+    route: '/regenerator',
+    group: 'lab',
+    lead: 'Channel geometry, heat transfer, pressure drop, fan power and time constant of the ceramic blocks.',
+    what:
+      'The calculation of section 4.4 of the thesis: 30 honeycomb blocks in two rows, 60 × 60 square channels each, ' +
+      'laminar air flow. Change the geometry or the air flow and every number follows.',
+    how: [
+      'Channel pitch from the inner block width, channel side 8 × the wall thickness.',
+      'Laminar, fully developed flow in square ducts: Nu = 3.61, f·Re = 56.9.',
+      'Pressure drop by Darcy–Weisbach, without minor losses; fan power at 50 % efficiency.',
+      'Heat capacity from the block masses and c_p = 880 J/(kg K) (99.5 kJ/K, as in the paper), or the 95 kJ/K of the thesis.',
+      'The thesis column shows the printed values next to the computed ones.',
+    ],
+    formulas: [
+      'p = L_in / 60,  t = p / 9,  a = 8p / 9',
+      'Re = ρ·v·a / μ,  h = Nu·k / a,  NTU = h·A / (ṁ·c_p)',
+      'Δp = f·(L/a)·ρv²/2,  f = 56.9 / Re',
+      'τ = C / (h·A)',
+    ],
+    scripts: ['section 4.4 of the thesis (calculated by hand)'],
+  },
 ];
 
 export function tool(id: string): ToolInfo {

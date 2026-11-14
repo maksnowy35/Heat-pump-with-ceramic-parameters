@@ -1,0 +1,19 @@
+textarea {
+  width: 100%;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.82rem;
+  padding: 0.4rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+
+.numbers {
+  margin-top: 1.6rem;
+
+  h3 {
+    font-size: 1rem;
+  }
+}

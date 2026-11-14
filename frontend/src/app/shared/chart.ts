@@ -21,6 +21,8 @@ export interface Series {
   points?: number;
   /** false keeps the series out of the legend (e.g. the dotted part of a split series) */
   legend?: boolean;
+  /** false draws the points only (scatter) */
+  line?: boolean;
 }
 
 export interface Band {
@@ -120,6 +122,7 @@ export class ChartView implements OnDestroy {
   yMax = input<number | undefined>(undefined);
   y2Min = input<number | undefined>(undefined);
   y2Max = input<number | undefined>(undefined);
+  yLog = input(false);
   markers = input<Marker[]>([]);
   bands = input<Band[]>([]);
   legend = input(true);
@@ -135,7 +138,7 @@ export class ChartView implements OnDestroy {
         series: this.series(),
         xLabel: this.xLabel(), yLabel: this.yLabel(), y2Label: this.y2Label(),
         xMin: this.xMin(), xMax: this.xMax(), xStep: this.xStep(),
-        yMin: this.yMin(), yMax: this.yMax(), y2Min: this.y2Min(), y2Max: this.y2Max(),
+        yMin: this.yMin(), yMax: this.yMax(), y2Min: this.y2Min(), y2Max: this.y2Max(), yLog: this.yLog(),
         legend: this.legend(),
       };
       untracked(() => this.build(opts));
@@ -151,7 +154,7 @@ export class ChartView implements OnDestroy {
   private build(o: {
     series: Series[]; xLabel: string; yLabel: string; y2Label: string | null;
     xMin?: number; xMax?: number; xStep?: number; yMin?: number; yMax?: number;
-    y2Min?: number; y2Max?: number; legend: boolean;
+    y2Min?: number; y2Max?: number; yLog: boolean; legend: boolean;
   }): void {
     const datasets = o.series.map(s => ({
       label: s.label,
@@ -168,6 +171,7 @@ export class ChartView implements OnDestroy {
       clip: 6,
       yAxisID: s.axis ?? 'y',
       showInLegend: s.legend !== false,
+      showLine: s.line !== false,
     }));
 
     const grid = { color: 'rgba(29, 42, 51, 0.06)' };
@@ -178,7 +182,8 @@ export class ChartView implements OnDestroy {
         title: { display: true, text: o.xLabel }, grid,
       },
       y: {
-        min: o.yMin, max: o.yMax, ticks: { maxTicksLimit: 7 },
+        type: o.yLog ? 'logarithmic' : 'linear',
+        min: o.yMin, max: o.yMax, ticks: { maxTicksLimit: o.yLog ? 10 : 7 },
         title: { display: !!o.yLabel, text: o.yLabel }, grid,
       },
     };

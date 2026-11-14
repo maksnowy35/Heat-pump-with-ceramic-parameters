@@ -1,0 +1,84 @@
+<app-tool-head id="ntc" />
+
+<div class="layout">
+  <aside class="controls" aria-label="Measurement">
+    <fieldset>
+      <legend>Measured</legend>
+      <div class="segmented" role="group" aria-label="Input">
+        <button type="button" [class.on]="mode() === 'current'" (click)="mode.set('current')">current</button>
+        <button type="button" [class.on]="mode() === 'resistance'" (click)="mode.set('resistance')">resistance</button>
+      </div>
+      @if (mode() === 'current') {
+        <label class="field"><span>Current [mA]</span>
+          <input type="number" min="0.01" step="0.01" [value]="current()" (input)="current.set(value($event))"></label>
+        <label class="field"><span>Supply voltage [V]</span>
+          <input type="number" min="0.1" step="0.1" [value]="supply()" (input)="supply.set(value($event))"></label>
+      } @else {
+        <label class="field"><span>Resistance [Ω]</span>
+          <input type="number" min="1" step="1" [value]="resistance()" (input)="resistance.set(value($event))"></label>
+      }
+    </fieldset>
+    <fieldset>
+      <legend>R–T table</legend>
+      <p class="note">Empty: the NTC 5 kΩ (Tn5) table of the original script. Or paste "t; R" lines.</p>
+      <textarea rows="8" placeholder="-20; 33210&#10;-10; 21070&#10;0; 13730&#10;…" [value]="tableText()"
+                (change)="setTable($event)" aria-label="R-T table"></textarea>
+      @if (tableError()) { <p class="error">Each line needs a temperature and a resistance; at least 3 lines.</p> }
+      @if (tableText()) { <button type="button" (click)="useDefault()">back to NTC 5k</button> }
+    </fieldset>
+  </aside>
+
+  <section class="main">
+    @if (error(); as e) { <p class="error">{{ e }}</p> }
+    @if (data(); as d) {
+      @if (d.reading; as r) {
+        <header class="readout">
+          <p class="big">{{ fix(r.t_log, 2) }} °C <small>at {{ num(r.resistance, 5) }} Ω</small></p>
+          <p>
+            linear table {{ fix(r.t_linear, 2) }} °C · Beta {{ fix(r.t_beta, 2) }} °C · Steinhart–Hart {{ fix(r.t_steinhart_hart, 2) }} °C
+          </p>
+        </header>
+      }
+      <div class="grid2">
+        <div class="figure">
+          <h3>Characteristic</h3>
+          <app-chart [series]="rt()" xLabel="t [°C]" yLabel="R [Ω]" [yLog]="true" [height]="320" ariaLabel="R-T characteristic" />
+        </div>
+        <div class="figure">
+          <h3>Error of linear interpolation</h3>
+          <app-chart [series]="interp()" xLabel="t [°C]" yLabel="ΔT [K]" [yMin]="-0.1" [yMax]="0.8" [markers]="classB"
+                     [legend]="false" [height]="320" ariaLabel="Linear minus logarithmic interpolation" />
+        </div>
+      </div>
+      <div class="grid2 numbers">
+        <div>
+          <h3>Fitted models</h3>
+          <table class="data">
+            <thead><tr><th class="l">Model</th><th class="l">Parameters</th><th>Max error at the table [K]</th></tr></thead>
+            <tbody>
+              @for (m of d.models; track m.name) {
+                <tr>
+                  <td class="l">{{ m.name }}</td>
+                  <td class="l">@for (p of m.params | keyvalue; track p.key) { {{ p.key }} = {{ num(p.value, 5) }}&nbsp; }</td>
+                  <td>{{ fix(m.max_error, 3) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3>B constants</h3>
+          <table class="data">
+            <thead><tr><th class="l"></th><th>From the table [K]</th><th>Datasheet [K]</th></tr></thead>
+            <tbody>
+              @for (k of bKeys(); track k) {
+                <tr><td class="l">{{ k }}</td><td>{{ fix(d.b_values[k], 0) }}</td><td>{{ d.datasheet_b[k] || '–' }}</td></tr>
+              }
+            </tbody>
+          </table>
+          <p class="note">B25/85 falls between table points and is interpolated in ln R against 1/T.</p>
+        </div>
+      </div>
+    }
+  </section>
+</div>

@@ -1,0 +1,75 @@
+<app-tool-head id="modbus" />
+
+@if (status(); as s) {
+  <p class="link-state" [class.sim]="s.simulated">
+    @if (s.simulated) {
+      <b>Simulated controller</b> at unit id 1 – set <code>MODBUS_PORT</code> (e.g. <code>COM8</code> or <code>/dev/ttyUSB0</code>)
+      when starting the API to talk to the real one.
+    } @else {
+      <b>{{ s.port }}</b>
+    }
+    · {{ s.baudrate }} baud · 8{{ s.parity }}1 · timeout {{ s.timeout }} s
+    @if (!s.writes_allowed) { · writing off }
+  </p>
+}
+@if (error(); as e) { <p class="error">{{ e }}</p> }
+
+<div class="cards">
+  <section class="card">
+    <h2>Find the controller</h2>
+    <p class="note">Asks every unit id for one register: input register first, then holding register.</p>
+    <div class="row">
+      <label class="field"><span>Unit id from</span>
+        <input type="number" min="1" max="247" [value]="scanFrom()" (change)="scanFrom.set(value($event))"></label>
+      <label class="field"><span>to</span>
+        <input type="number" min="1" max="247" [value]="scanTo()" (change)="scanTo.set(value($event))"></label>
+      <label class="field"><span>Register</span>
+        <input type="number" min="0" max="65535" [value]="scanAddress()" (change)="scanAddress.set(value($event))"></label>
+    </div>
+    <button type="button" class="primary" [disabled]="scanning()" (click)="scan()">{{ scanning() ? 'Scanning…' : 'Scan' }}</button>
+    @if (hits(); as h) {
+      @if (h.length) {
+        <ul class="hits">
+          @for (x of h; track x.unit) { <li>Unit id <b>{{ x.unit }}</b> answers on the {{ x.kind }} register: {{ x.value }}</li> }
+        </ul>
+      } @else {
+        <p class="note">No device answered in this range.</p>
+      }
+    }
+  </section>
+
+  <section class="card">
+    <h2>Read registers</h2>
+    <div class="row">
+      <label class="field"><span>Unit id</span>
+        <input type="number" min="1" max="247" [value]="unit()" (change)="unit.set(value($event))"></label>
+      <label class="field"><span>Address</span>
+        <input type="number" min="0" max="65535" [value]="address()" (change)="address.set(value($event))"></label>
+      <label class="field"><span>Count</span>
+        <input type="number" min="1" max="125" [value]="count()" (change)="count.set(value($event))"></label>
+    </div>
+    <div class="segmented" role="group" aria-label="Register type">
+      <button type="button" [class.on]="kind() === 'input'" (click)="kind.set('input')">input (04)</button>
+      <button type="button" [class.on]="kind() === 'holding'" (click)="kind.set('holding')">holding (03)</button>
+    </div>
+    <div><button type="button" class="primary" (click)="read()">Read</button></div>
+    @if (readResult(); as r) { <app-frame-view [exchange]="r" /> }
+  </section>
+
+  <section class="card">
+    <h2>Write one register</h2>
+    <p class="note">Function 06. On the real controller this changes its configuration.</p>
+    <div class="row">
+      <label class="field"><span>Address</span>
+        <input type="number" min="0" max="65535" [value]="writeAddress()" (change)="writeAddress.set(value($event))"></label>
+      <label class="field"><span>Value</span>
+        <input type="number" min="0" max="65535" [value]="writeValue()" (change)="writeValue.set(value($event))"></label>
+    </div>
+    <label class="check">
+      <input type="checkbox" [checked]="confirm()" (change)="confirm.set($any($event.target).checked)">
+      Write {{ writeValue() }} to register {{ writeAddress() }} at unit id {{ unit() }}
+    </label>
+    <button type="button" class="primary" [disabled]="!confirm() || (status() && !status()!.writes_allowed)" (click)="write()">Write</button>
+    @if (writeResult(); as r) { <app-frame-view [exchange]="r" /> }
+  </section>
+</div>

@@ -1,0 +1,78 @@
+<app-tool-head id="regenerator" />
+
+<div class="layout">
+  <aside class="controls" aria-label="Regenerator">
+    <fieldset>
+      <legend>Air and geometry</legend>
+      <label class="slider"><span>Air mass flow <b>{{ massFlow().toFixed(3) }} kg/s</b></span>
+        <input type="range" min="0.1" max="0.8" step="0.002" [value]="massFlow()" (input)="massFlow.set(value($event))"></label>
+      <label class="slider"><span>Channels per side <b>{{ cells() }}</b></span>
+        <input type="range" min="20" max="100" step="1" [value]="cells()" (input)="cells.set(value($event))"></label>
+      <label class="slider"><span>Channel / wall <b>{{ ratio() }}</b></span>
+        <input type="range" min="3" max="15" step="0.5" [value]="ratio()" (input)="ratio.set(value($event))"></label>
+      <label class="slider"><span>Top row length <b>{{ lengthTop() }} mm</b></span>
+        <input type="range" min="50" max="600" step="2" [value]="lengthTop()" (input)="lengthTop.set(value($event))"></label>
+      <label class="slider"><span>Bottom row length <b>{{ lengthBottom() }} mm</b></span>
+        <input type="range" min="0" max="300" step="2" [value]="lengthBottom()" (input)="lengthBottom.set(value($event))"></label>
+      <label class="slider"><span>Half-cycle <b>{{ halfCycle() }} s</b></span>
+        <input type="range" min="10" max="180" step="5" [value]="halfCycle()" (input)="halfCycle.set(value($event))"></label>
+    </fieldset>
+    <fieldset>
+      <legend>Heat capacity</legend>
+      <div class="segmented" role="group" aria-label="Heat capacity">
+        <button type="button" [class.on]="capacity() === 'thesis'" (click)="capacity.set('thesis')">95 kJ/K (thesis)</button>
+        <button type="button" [class.on]="capacity() === 'masses'" (click)="capacity.set('masses')">from the masses</button>
+      </div>
+    </fieldset>
+    @if (!isDefault()) { <button type="button" (click)="reset()">back to the thesis geometry</button> }
+  </aside>
+
+  <section class="main">
+    @if (error(); as e) { <p class="error">{{ e }}</p> }
+    @if (data(); as d) {
+      <header class="readout">
+        <p class="big">τ = {{ fix(d.values['tau'], 1) }} s <small>Δp = {{ fix(d.values['dp'], 1) }} Pa · NTU = {{ fix(d.values['ntu'], 1) }}</small></p>
+        <p>
+          Re {{ fix(d.values['reynolds'], 0) }} (laminar below ~2300) · fan {{ fix(d.values['fan_power_el'], 1) }} W electrical ·
+          the half-cycle is {{ fix(d.values['half_cycle_over_tau'], 1) }} τ
+        </p>
+      </header>
+      <div class="top">
+        <app-ceramic-block [cells]="cells()" [pitch]="d.values['pitch'] * 1000" [wall]="d.values['wall'] * 1000"
+                           [channel]="d.values['channel'] * 1000" />
+        <div class="figure">
+          <h3>Heat exchanged within a half-cycle (lumped models)</h3>
+          <app-chart [series]="curves()" [markers]="markers()" xLabel="t [s]" yLabel="fraction [-]" [yMin]="0" [yMax]="1"
+                     [xMin]="0" [height]="250" ariaLabel="Fraction of the heat exchanged against time" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th class="l">Quantity</th><th class="l">Unit</th><th>Computed</th><th>Thesis §4.4</th></tr></thead>
+          @for (g of groups; track g.group) {
+            <tbody>
+              <tr class="group"><th class="l" colspan="4">{{ g.group }}</th></tr>
+              @for (l of g.lines; track l.key) {
+                <tr><td class="l">{{ l.label }}</td><td class="l unit">{{ l.unit }}</td><td>{{ show(d, l) }}</td><td class="thesis">{{ thesis(d, l) }}</td></tr>
+              }
+            </tbody>
+          }
+          <tbody>
+            <tr class="group"><th class="l" colspan="4">Per row</th></tr>
+            @for (r of d.rows; track r.name) {
+              <tr>
+                <td class="l">{{ r.name }}: {{ r.n_channels.toLocaleString('en-US') }} channels, A = {{ num(r.wetted_area, 4) }} m²</td>
+                <td class="l unit">W/K · Pa</td>
+                <td>{{ num(r.hA, 4) }} · {{ num(r.dp, 3) }}</td>
+                <td class="thesis">
+                  @if (isDefault()) { {{ r.name === 'top' ? '6082 · 47.0' : '1500 · 11.6' }} }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (!isDefault()) { <p class="note">The thesis column is shown for the thesis geometry and flow only.</p> }
+    }
+  </section>
+</div>

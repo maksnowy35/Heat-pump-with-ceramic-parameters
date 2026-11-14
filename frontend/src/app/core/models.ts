@@ -149,3 +149,81 @@ export interface Candidate {
   p_std: number;
   score: number;
 }
+
+export interface CopTPoint {
+  start: string;
+  t_out: Num;
+  cop: Num;
+  cop_total: Num;
+  p_comp: Num;
+  valid: number;
+  blocks: number;
+}
+
+export interface NtcModel {
+  name: string;
+  params: Record<string, number>;
+  max_error: number;
+}
+
+export interface NtcResponse {
+  table: [number, number][];
+  models: NtcModel[];
+  b_values: Record<string, number>;
+  datasheet_b: Record<string, number>;
+  curve_t: number[];
+  curve_r: Record<string, number[]>;
+  interp_t: number[];
+  interp_error: number[];
+  reading: { resistance: number; t_linear: Num; t_log: Num; t_beta: number; t_steinhart_hart: number } | null;
+}
+
+export interface ModbusStatus {
+  port: string;
+  simulated: boolean;
+  baudrate: number;
+  parity: string;
+  timeout: number;
+  writes_allowed: boolean;
+}
+
+export interface FrameByte {
+  hex: string;
+  field: string;
+}
+
+export interface ModbusExchange {
+  ok: boolean;
+  values: number[];
+  error: string | null;
+  request: string;
+  response: string | null;
+  request_fields: FrameByte[];
+  response_fields: FrameByte[];
+}
+
+export interface ScanHit {
+  unit: number;
+  kind: string;
+  value: number;
+}
+
+export interface RegeneratorRequest {
+  mass_flow: number;
+  cells: number;
+  channel_to_wall: number;
+  length_top: number;
+  length_bottom: number;
+  heat_capacity: number | null;
+  half_cycle: number;
+  fan_efficiency: number;
+}
+
+export interface RegeneratorResponse {
+  values: Record<string, number>;
+  rows: { name: string; n_channels: number; wetted_area: number; hA: number; dp: number; heat_capacity: number }[];
+  thesis: Record<string, number>;
+  curve_t: number[];
+  captured_tau: number[];
+  captured_bed: number[];
+}

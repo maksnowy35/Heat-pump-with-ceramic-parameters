@@ -1,0 +1,26 @@
+.top {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 2rem;
+  align-items: center;
+  margin-bottom: 1.4rem;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.group th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  padding-top: 0.9rem;
+  border-bottom: 1px solid var(--ink);
+}
+
+.unit {
+  color: var(--steel);
+}
+
+.thesis {
+  color: var(--steel);
+}
