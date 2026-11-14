@@ -1,0 +1,11 @@
+{
+  "note": "values printed in section 4.4 of the thesis (geometry 60x60, m = 0.468 kg/s, C = 95 kJ/K)",
+  "pitch_mm": 2.493, "wall_mm": 0.277, "channel_mm": 2.216,
+  "open_area_block": 0.017778, "open_area_row": 0.266667,
+  "volume_flow": 0.390, "velocity": 1.463, "reynolds": 210.2, "h": 42.3,
+  "wetted_area_top": 143.616, "wetted_area_bottom": 35.425,
+  "hA_top": 6082, "hA_bottom": 1500, "hA": 7582, "ntu": 16,
+  "friction": 0.271, "dp_top": 47.0, "dp_bottom": 11.6, "dp": 58.6,
+  "fan_power_mech": 22.9, "fan_power_el": 45.7, "fan_saving_mech": 15.4, "fan_saving_el": 30.7,
+  "heat_capacity": 95000, "tau": 12.5
+}
