@@ -45,3 +45,34 @@
     }
   </section>
 </div>
+
+<section class="section">
+  <app-tool-head id="cop-tout" [level]="2" />
+  <div class="grid2">
+    <div class="figure">
+      <app-chart [series]="copTSeries()" xLabel="T3 [°C]" yLabel="COP [-]" [yMin]="0" [yMax]="10" [xMin]="-2" [xMax]="16"
+                 [height]="320" ariaLabel="COP against outdoor temperature" />
+      <p class="note">
+        @if (ds.selected()?.source === 'demo') {
+          The points come from the synthetic record and only show how the tool works; the grey bars are the measured ranges.
+        } @else {
+          Grey bars: COP ranges of the measured windows in section 4.3 of the thesis.
+        }
+      </p>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th class="l">Window</th><th>T3 [°C]</th><th>COP</th><th>COP<sub>comp</sub></th><th>P<sub>comp</sub> [W]</th><th>Blocks</th></tr></thead>
+        <tbody>
+          @for (p of copT(); track p.start) {
+            <tr>
+              <td class="l"><a routerLink="/cop" [queryParams]="{ start: p.start, minutes: 30 }" (click)="sel.use(p.start, 30)">{{ stamp(p.start).slice(0, 16) }}</a></td>
+              <td>{{ fix(p.t_out, 1) }}</td><td>{{ fix(p.cop_total) }}</td><td>{{ fix(p.cop) }}</td><td>{{ fix(p.p_comp, 0) }}</td>
+              <td>{{ p.valid }}/{{ p.blocks }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

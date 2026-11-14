@@ -1,0 +1,39 @@
+<section class="hero">
+  <div>
+    <h1>Measurements of a heat pump with a ceramic regenerator, in one place</h1>
+    <p>
+      A compact ventilation unit that reverses its air flow every 60 seconds through a bed of ceramic honeycomb blocks,
+      with an R290 heat pump built in. These are the tools I used to analyse its measurements, reworked from a folder of
+      one-off scripts into one app: every tool says what it does, how, and which script it replaces – press
+      <span class="i">i</span> next to its title.
+    </p>
+  </div>
+  <ul class="facts" aria-label="Measured on the test stand">
+    <li><b>3.70–4.31</b><span>COP at 0.6–8.6 °C outdoor, heat pump with the regenerator</span></li>
+    <li><b>&gt; 90 %</b><span>temperature effectiveness of the regenerator alone</span></li>
+    <li><b>60 + 60 s</b><span>supply and exhaust half-cycles, one reversible fan</span></li>
+  </ul>
+</section>
+
+@for (g of groups; track g.id) {
+  <section class="group">
+    <header>
+      <h2>{{ g.title }}</h2>
+      <p>{{ g.text }}</p>
+    </header>
+    <div class="cards">
+      @for (t of g.tools; track t.id) {
+        <a class="card" [routerLink]="t.route">
+          <h3>{{ t.title }}</h3>
+          <p>{{ t.lead }}</p>
+          <small>replaces {{ t.scripts.join(', ') }}</small>
+        </a>
+      }
+    </div>
+  </section>
+}
+
+<p class="note demo">
+  The measurement data of the test stand is not published; the app starts on a synthetic record in the same logger
+  layout. Load your own reports (.xlsx / .csv) on any analysis page.
+</p>

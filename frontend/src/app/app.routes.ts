@@ -1,7 +1,12 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'record' },
+  {
+    path: '',
+    pathMatch: 'full',
+    title: 'HeatFlip',
+    loadComponent: () => import('./pages/home/home').then(m => m.HomePage),
+  },
   {
     path: 'record',
     title: 'HeatFlip · Record',
@@ -27,5 +32,20 @@ export const routes: Routes = [
     title: 'HeatFlip · COP blocks',
     loadComponent: () => import('./pages/cop/cop').then(m => m.CopPage),
   },
-  { path: '**', redirectTo: 'record' },
+  {
+    path: 'ntc',
+    title: 'HeatFlip · NTC characteristic',
+    loadComponent: () => import('./pages/ntc/ntc').then(m => m.NtcPage),
+  },
+  {
+    path: 'modbus',
+    title: 'HeatFlip · Modbus RTU',
+    loadComponent: () => import('./pages/modbus/modbus').then(m => m.ModbusPage),
+  },
+  {
+    path: 'regenerator',
+    title: 'HeatFlip · Ceramic regenerator',
+    loadComponent: () => import('./pages/regenerator/regenerator').then(m => m.RegeneratorPage),
+  },
+  { path: '**', redirectTo: '' },
 ];
