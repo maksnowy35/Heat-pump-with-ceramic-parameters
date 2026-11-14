@@ -219,3 +219,154 @@ button.link {
     vertical-align: 0.12em;
   }
 }
+
+/* layout shared by the analysis pages */
+.layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 2.2rem;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.readout {
+  margin-bottom: 0.8rem;
+
+  .big {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.2;
+
+    small {
+      font-size: 0.5em;
+      color: var(--steel);
+      font-weight: 400;
+    }
+  }
+
+  p {
+    color: var(--steel);
+    margin: 0.1rem 0 0;
+  }
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.6rem 2rem;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.figure {
+  min-width: 0;
+
+  h3 {
+    font-size: 1rem;
+    margin: 0 0 0.2rem;
+  }
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    padding: 0.25rem 0.45rem;
+    border-bottom: 1px solid var(--rule);
+    text-align: right;
+    vertical-align: baseline;
+  }
+
+  th {
+    font-weight: 500;
+  }
+
+  .l {
+    text-align: left;
+  }
+
+  .muted td {
+    color: var(--steel);
+    font-style: italic;
+  }
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-weight: 500;
+
+  &.ok {
+    background: #dcebd9;
+    color: #2d5f28;
+  }
+
+  &.partial {
+    background: #f6e7c4;
+    color: #75520c;
+  }
+
+  &.missing {
+    background: #ecdcd8;
+    color: #7c2f20;
+  }
+}
+
+.section {
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--rule);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem;
+
+  input,
+  select {
+    font: inherit;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: var(--panel);
+    color: var(--ink);
+  }
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+button.primary {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+
+  &:hover:not(:disabled) {
+    background: #33444f;
+  }
+}

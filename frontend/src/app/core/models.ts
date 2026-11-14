@@ -87,3 +87,65 @@ export interface CumulativeResponse {
   final_cop: Num;
   final_cop_total: Num;
 }
+
+export interface CycleTotals {
+  q_kwh: number;
+  w_kwh: number;
+  w_total_kwh: number;
+  cop: Num;
+  cop_total: Num;
+}
+
+export interface WindowResponse {
+  start: string;
+  end: string;
+  rows: number;
+  seconds: Num[];
+  supply: Num[];
+  series: Record<string, Num[]>;
+  totals: CycleTotals;
+}
+
+export interface PhasePlan {
+  anchor: string;
+  supply: boolean;
+  half_s: number;
+}
+
+export interface PhaseSuggestion {
+  plan: PhasePlan | null;
+  missing: number;
+  half_s_logged: Num;
+}
+
+export interface PhasePreview {
+  seconds: Num[];
+  t2: Num[];
+  supply_logged: Num[];
+  supply_rebuilt: Num[];
+  origin: string;
+  filled: number;
+}
+
+export interface Coverage {
+  start: string;
+  end: string;
+  first: string | null;
+  rows: number;
+  coverage: number;
+  max_gap_s: number;
+  flags: number;
+  compressor: number;
+  t3_mean: Num;
+  t3_std: Num;
+  status: 'ok' | 'partial' | 'missing';
+}
+
+export interface Candidate {
+  start: string;
+  minutes: number;
+  t3_mean: number;
+  t3_std: number;
+  p_std: number;
+  score: number;
+}
