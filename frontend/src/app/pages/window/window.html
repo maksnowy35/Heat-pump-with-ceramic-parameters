@@ -1,0 +1,55 @@
+<app-tool-head id="window" />
+<app-dataset-bar />
+
+<div class="layout">
+  <aside class="controls" aria-label="Window">
+    <app-window-picker />
+  </aside>
+
+  <section class="main">
+    @if (error(); as e) { <p class="error">{{ e }}</p> }
+    @if (data(); as d) {
+      <header class="readout">
+        <p class="big">COP {{ fix(d.totals.cop_total) }} <small>over the window, with the fan and automation</small></p>
+        <p>
+          {{ fix(d.totals.cop) }} for the compressor alone · T3 {{ fix(t3(), 1) }} °C ·
+          p {{ fix(psuc(), 2) }} / {{ fix(pdis(), 2) }} bar(g) · superheat {{ fix(superheat(), 1) }} K ·
+          {{ d.rows }} rows
+        </p>
+      </header>
+      <div class="grid2">
+        <div class="figure">
+          <h3>Temperatures</h3>
+          <app-chart [series]="temps()" xLabel="t [min]" yLabel="T [°C]" [xMin]="0" [xMax]="sel.minutes()" [xStep]="step()"
+                     [height]="270" ariaLabel="Air temperatures" />
+        </div>
+        <div class="figure">
+          <h3>Relative humidity</h3>
+          <app-chart [series]="humid()" xLabel="t [min]" yLabel="φ [-]" [xMin]="0" [xMax]="sel.minutes()" [xStep]="step()"
+                     [height]="270" ariaLabel="Relative humidity" />
+        </div>
+        <div class="figure">
+          <h3>Enthalpy</h3>
+          <app-chart [series]="enth()" xLabel="t [min]" yLabel="i [kJ/kg]" [xMin]="0" [xMax]="sel.minutes()" [xStep]="step()"
+                     [height]="270" ariaLabel="Air enthalpy" />
+        </div>
+        <div class="figure">
+          <h3>Pressures</h3>
+          <app-chart [series]="pressures()" xLabel="t [min]" yLabel="p [bar(g)]" [xMin]="0" [xMax]="sel.minutes()"
+                     [xStep]="step()" [height]="270" ariaLabel="Suction and discharge pressure" />
+        </div>
+        <div class="figure">
+          <h3>Running COP and compressor power</h3>
+          <app-chart [series]="cop()" xLabel="t [min]" yLabel="COP [-]" y2Label="P [W]" [xMin]="0" [xMax]="sel.minutes()"
+                     [xStep]="step()" [yMin]="0" [y2Min]="0" [height]="270" ariaLabel="Running COP" />
+        </div>
+        <div class="figure">
+          <h3>Refrigerant side</h3>
+          <app-chart [series]="refrigerant()" xLabel="t [min]" yLabel="t [°C]" y2Label="Superheat [K]" [xMin]="0"
+                     [xMax]="sel.minutes()" [xStep]="step()" [y2Min]="0" [height]="270" ariaLabel="Saturation temperatures and superheat" />
+          <p class="note">Solid: controller values. Dashed: saturation temperature of R290 at the logged pressure.</p>
+        </div>
+      </div>
+    }
+  </section>
+</div>

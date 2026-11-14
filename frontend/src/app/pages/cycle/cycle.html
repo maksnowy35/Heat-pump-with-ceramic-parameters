@@ -1,0 +1,59 @@
+<app-tool-head id="cycle" />
+<app-dataset-bar />
+
+<div class="layout">
+  <aside class="controls" aria-label="Cycle">
+    <app-window-picker [showLength]="false" [keepLength]="true">
+      <label class="check">
+        <input type="checkbox" [checked]="align()" (change)="setAlign($any($event.target).checked)">
+        Start at the next supply half-cycle
+      </label>
+      <div class="segmented" role="group" aria-label="Move by one cycle">
+        <button type="button" (click)="move(-1)">← previous cycle</button>
+        <button type="button" (click)="move(1)">next cycle →</button>
+      </div>
+    </app-window-picker>
+  </aside>
+
+  <section class="main">
+    @if (error(); as e) { <p class="error">{{ e }}</p> }
+    @if (data(); as d) {
+      <header class="readout">
+        <p class="big">COP {{ fix(d.totals.cop_total) }} <small>of this cycle, with the fan and automation</small></p>
+        <p>
+          {{ stamp(d.start) }} – {{ stamp(d.end).slice(11) }} · Q {{ fix(d.totals.q_kwh * 3600, 0) }} kJ ·
+          W {{ fix(d.totals.w_total_kwh * 3600, 0) }} kJ ({{ fix(d.totals.w_kwh * 3600, 0) }} kJ compressor) ·
+          COP<sub>comp</sub> {{ fix(d.totals.cop) }}
+        </p>
+      </header>
+      <div class="grid2">
+        <div class="figure">
+          <h3>Temperatures</h3>
+          <app-chart [series]="temps()" [bands]="bands()" xLabel="t [s]" yLabel="T [°C]" [xMin]="0" [xMax]="120" [xStep]="10"
+                     [height]="260" ariaLabel="Temperatures over one cycle" />
+        </div>
+        <div class="figure">
+          <h3>Relative humidity</h3>
+          <app-chart [series]="humid()" [bands]="bands()" xLabel="t [s]" yLabel="φ [-]" [xMin]="0" [xMax]="120" [xStep]="10"
+                     [height]="260" ariaLabel="Humidity over one cycle" />
+        </div>
+        <div class="figure">
+          <h3>Enthalpy</h3>
+          <app-chart [series]="enth()" [bands]="bands()" xLabel="t [s]" yLabel="i [kJ/kg]" [xMin]="0" [xMax]="120" [xStep]="10"
+                     [height]="260" ariaLabel="Enthalpy over one cycle" />
+        </div>
+        <div class="figure">
+          <h3>Pressures</h3>
+          <app-chart [series]="pressures()" [bands]="bands()" xLabel="t [s]" yLabel="p [bar(g)]" [xMin]="0" [xMax]="120"
+                     [xStep]="10" [height]="260" ariaLabel="Pressures over one cycle" />
+        </div>
+      </div>
+      <div class="figure" style="margin-top: 1.6rem">
+        <h3>Heating capacity and electrical power</h3>
+        <app-chart [series]="power()" [bands]="bands()" xLabel="t [s]" yLabel="[W]" [xMin]="0" [xMax]="120" [xStep]="10"
+                   [yMin]="0" [height]="280" ariaLabel="Heating capacity and power over one cycle" />
+        <p class="note">Heating capacity 0.389 · (i₂ − i₃) in the supply half-cycle (shaded), zero while the regenerator is charged.</p>
+      </div>
+    }
+  </section>
+</div>

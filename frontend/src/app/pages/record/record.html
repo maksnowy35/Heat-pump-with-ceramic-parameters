@@ -1,0 +1,146 @@
+<app-tool-head id="record" />
+<app-dataset-bar />
+
+@if (ds.selected(); as d) {
+  <div class="cols">
+    <section>
+      <h2>Channels</h2>
+      <div class="table-wrap">
+        <table class="data channels">
+          <thead><tr><th class="l">Column</th><th class="l">Symbol</th><th class="l">Unit</th><th class="l">Meaning</th><th>Logged</th></tr></thead>
+          <tbody>
+            @for (c of channels; track c.column) {
+              <tr>
+                <td class="l"><code>{{ c.column }}</code></td><td class="l">{{ c.symbol }}</td><td class="l">{{ c.unit }}</td>
+                <td class="l">{{ c.meaning }}</td>
+                <td>
+                  <span class="bar"><i [style.width.%]="completeness()[c.column] * 100"></i></span>
+                  {{ pct(completeness()[c.column]) }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>In this record</h2>
+      <dl class="facts">
+        <dt>Files</dt><dd>{{ d.files.join(', ') }}</dd>
+        <dt>From</dt><dd>{{ stamp(d.start) }}</dd>
+        <dt>To</dt><dd>{{ stamp(d.end) }}</dd>
+        <dt>Rows</dt><dd>{{ d.rows.toLocaleString('en-US') }}, every {{ d.sampling_s }} s</dd>
+        <dt>Compressor on</dt><dd>{{ pct(d.compressor_on) }} of the rows</dd>
+        <dt>T3</dt><dd>{{ fix(d.t_out_min, 1) }} … {{ fix(d.t_out_max, 1) }} °C</dd>
+        <dt>No flags</dt><dd>{{ d.missing_flags.toLocaleString('en-US') }} rows</dd>
+      </dl>
+      <h3>Logging gaps over 10 min</h3>
+      @if (d.gaps.length) {
+        <ul class="gaps">
+          @for (g of d.gaps; track g.start) { <li>{{ stamp(g.start) }} → {{ stamp(g.end) }} <b>{{ g.hours }} h</b></li> }
+        </ul>
+      } @else {
+        <p class="note">none</p>
+      }
+    </section>
+  </div>
+
+  <section class="section">
+    <app-tool-head id="flags" [level]="2" />
+    @if (phase(); as s) {
+      @if (s.missing === 0) {
+        <p>All rows have their supply/exhaust flags@if (s.half_s_logged) {; logged half-cycle {{ fix(s.half_s_logged, 0) }} s}.</p>
+        @if (d.source === 'demo') {
+          <button type="button" (click)="resetDemo()">Reset the demo record</button>
+          <span class="note"> to bring back the missing flags and try again.</span>
+        }
+      } @else if (plan(); as p) {
+        <div class="flags">
+          <div class="inputs">
+            <p>{{ s.missing.toLocaleString('en-US') }} rows without flags.</p>
+            <label class="field">
+              <span>Anchor (first logged switch)</span>
+              <input type="datetime-local" step="1" [value]="p.anchor" (change)="setAnchor($event)">
+            </label>
+            <span class="field-label">Half-cycle starting at the anchor</span>
+            <div class="segmented" role="group" aria-label="State at the anchor">
+              <button type="button" [class.on]="p.supply" (click)="setState(true)">supply</button>
+              <button type="button" [class.on]="!p.supply" (click)="setState(false)">exhaust</button>
+            </div>
+            <label class="field">
+              <span>Half-cycle [s] @if (s.half_s_logged) { <small>(logged: {{ fix(s.half_s_logged, 0) }} s)</small> }</span>
+              <input type="number" min="5" max="600" step="1" [value]="p.half_s" (change)="setHalf($event)">
+            </label>
+            <button type="button" class="primary" [disabled]="busy()" (click)="apply()">Write the flags</button>
+            @if (message(); as m) { <p class="note">{{ m }}</p> }
+          </div>
+          <div class="figure">
+            <h3>Around the anchor</h3>
+            <app-chart [series]="previewSeries()" xLabel="t − t_anchor [s]" yLabel="T2 [°C]" y2Label="supply flag"
+                       [y2Min]="-0.1" [y2Max]="1.6" [markers]="[{ x: 0, label: 'anchor', color: ochre }]" [height]="280"
+                       ariaLabel="Supply air temperature and the supply flag around the anchor" />
+            <p class="note">T2 rises in the supply half-cycle. Where the rebuilt flag (dashed) follows those rises, the phase is right.</p>
+          </div>
+        </div>
+      } @else {
+        <p>{{ s.missing.toLocaleString('en-US') }} rows without flags, but no logged switch to continue from.</p>
+      }
+    }
+  </section>
+
+  <section class="section">
+    <app-tool-head id="windows" [level]="2" />
+    <div class="cols wide-first">
+      <div>
+        <h3>Steady windows found in the record</h3>
+        @if (sel.suggestions().length) {
+          <div class="table-wrap">
+            <table class="data">
+              <thead><tr><th class="l">Start</th><th>T3 [°C]</th><th>σ(T3) [K]</th><th>σ(P) [W]</th><th class="l">Open</th></tr></thead>
+              <tbody>
+                @for (c of sel.suggestions(); track c.start) {
+                  <tr>
+                    <td class="l">{{ stamp(c.start) }}</td><td>{{ fix(c.t3_mean, 1) }}</td><td>{{ fix(c.t3_std) }}</td>
+                    <td>{{ fix(c.p_std, 0) }}</td>
+                    <td class="l links">
+                      <a routerLink="/window" [queryParams]="{ start: c.start, minutes: 30 }">window</a>
+                      <a routerLink="/cop" [queryParams]="{ start: c.start, minutes: 30 }">COP</a>
+                      <a routerLink="/cycle" [queryParams]="{ start: c.start }">cycle</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="note">No 30-minute window with flags and the compressor running throughout.</p>
+        }
+      </div>
+      <div>
+        <h3>Windows picked by hand</h3>
+        <label class="check">Tolerance on the start
+          <input type="number" min="0" max="600" step="1" [value]="tolerance()" (change)="tolerance.set(value($event))" style="width: 4.5rem"> s
+        </label>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th class="l">Start</th><th class="l">Status</th><th>Logged</th><th>Max gap [s]</th><th>T3 [°C]</th><th class="l"></th></tr></thead>
+            <tbody>
+              @for (r of presetRows(); track r.preset.start) {
+                <tr>
+                  <td class="l" [title]="r.preset.from.join(', ')">{{ stamp(r.preset.start) }}</td>
+                  <td class="l">@if (r.cov) { <span class="pill" [class]="r.cov.status">{{ r.cov.status }}</span> }</td>
+                  <td>{{ r.cov ? pct(r.cov.coverage) : '' }}</td>
+                  <td>{{ r.cov && r.cov.status !== 'missing' ? fix(r.cov.max_gap_s, 0) : '' }}</td>
+                  <td>{{ r.cov ? fix(r.cov.t3_mean, 1) : '' }}</td>
+                  <td class="l links">
+                    @if (r.cov && r.cov.status === 'ok') { <a routerLink="/window" [queryParams]="{ start: r.preset.start, minutes: 30 }">open</a> }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+}

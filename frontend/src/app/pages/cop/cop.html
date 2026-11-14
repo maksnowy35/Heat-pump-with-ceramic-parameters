@@ -1,79 +1,47 @@
+<app-tool-head id="cop" />
 <app-dataset-bar />
 
 <div class="layout">
   <aside class="controls" aria-label="Window">
-    <fieldset>
-      <legend>Window</legend>
-      <label class="field">
-        <span>Start</span>
-        <input type="datetime-local" step="1" [value]="start()" (change)="setStart($event)">
-      </label>
-      <label class="slider">
-        <span>Length <b>{{ minutes() }} min</b></span>
-        <input type="range" min="10" max="120" step="2" [value]="minutes()" (input)="minutes.set(value($event))">
-      </label>
-    </fieldset>
-    <fieldset>
-      <legend>Windows from the analysis</legend>
-      <div class="chips">
-        @for (p of presets(); track p.start) {
-          <button type="button" class="chip" [class.on]="p.start === start()" [disabled]="!p.ok"
-                  [title]="p.ok ? p.from.join(', ') : 'outside the selected record'" (click)="usePreset(p.start)">
-            {{ stamp(p.start).slice(0, 16) }}
-          </button>
-        }
-      </div>
-    </fieldset>
+    <app-window-picker />
   </aside>
 
   <section class="main">
     @if (error(); as e) { <p class="error">{{ e }}</p> }
     @if (data(); as d) {
       <header class="readout">
-        <h1>COP {{ fix(d.summary.cop_total) }} <small>with the fan and automation</small></h1>
+        <p class="big">COP {{ fix(d.summary.cop_total) }} <small>with the fan and automation</small></p>
         <p>
           {{ fix(d.summary.cop) }} for the compressor alone · {{ d.summary.valid }} of {{ d.summary.blocks }} blocks trusted ·
           compressor {{ num(d.summary.p_comp) }} W · T3 {{ fix(d.summary.t_out, 1) }} °C
         </p>
       </header>
       <app-chart [series]="copSeries()" xLabel="t [min]" yLabel="COP [-]" y2Label="Compressor power [W]"
-                 [xMin]="0" [xMax]="minutes()" [xStep]="minutes() <= 40 ? 2 : 10" [yMin]="0" [yMax]="14"
+                 [xMin]="0" [xMax]="sel.minutes()" [xStep]="sel.minutes() <= 40 ? 2 : 10" [yMin]="0" [yMax]="14"
                  [y2Min]="0" [y2Max]="5000" [height]="360" ariaLabel="COP in 2-minute blocks" />
       <p class="note">
         Solid: trusted block. Dotted: compressor setpoint below 0.20 or COP outside 1.5–12, drawn at the level of the
         previous trusted block.
       </p>
 
-      <table class="blocks">
-        <thead>
-          <tr><th>Block</th><th>Q [kWh]</th><th>W<sub>comp</sub> [kWh]</th><th>W [kWh]</th><th>COP<sub>comp</sub></th>
-            <th>COP</th><th>u<sub>comp</sub></th><th>P [W]</th></tr>
-        </thead>
-        <tbody>
-          @for (b of d.blocks; track b.start) {
-            <tr [class.bad]="!b.valid_total" [class.partial]="!b.complete">
-              <td>{{ stamp(b.start).slice(11) }}</td>
-              <td>{{ fix(b.q_kwh, 4) }}</td><td>{{ fix(b.w_kwh, 4) }}</td><td>{{ fix(b.w_total_kwh, 4) }}</td>
-              <td>{{ fix(b.cop) }}</td><td>{{ fix(b.cop_total) }}</td><td>{{ fix(b.setpoint) }}</td><td>{{ fix(b.p_comp, 0) }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr><th class="l">Block</th><th>Q [kWh]</th><th>W<sub>comp</sub> [kWh]</th><th>W [kWh]</th><th>COP<sub>comp</sub></th>
+              <th>COP</th><th>u<sub>comp</sub></th><th>P<sub>comp</sub> [W]</th><th>T3 [°C]</th></tr>
+          </thead>
+          <tbody>
+            @for (b of d.blocks; track b.start) {
+              <tr [class.muted]="!b.valid_total || !b.complete">
+                <td class="l">{{ stamp(b.start).slice(11) }}@if (!b.complete) { <small> (part)</small> }</td>
+                <td>{{ fix(b.q_kwh, 4) }}</td><td>{{ fix(b.w_kwh, 4) }}</td><td>{{ fix(b.w_total_kwh, 4) }}</td>
+                <td>{{ fix(b.cop) }}</td><td>{{ fix(b.cop_total) }}</td><td>{{ fix(b.setpoint) }}</td>
+                <td>{{ fix(b.p_comp, 0) }}</td><td>{{ fix(b.t_out, 1) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     }
   </section>
 </div>
-
-<section class="whole">
-  <h2>Whole record</h2>
-  <p class="note">Running COP from the first row, smoothed over 10 samples. Grey: compressor off for more than 2 h. Red: no data.</p>
-  @if (cumulative(); as c) {
-    <app-chart [series]="cumCop()" [bands]="bands()" xLabel="Operating time [h]" yLabel="COP [-]" [yMin]="0" [xMin]="0"
-               [height]="300" ariaLabel="Cumulative COP" />
-    <div class="pair">
-      <app-chart [series]="cumT3()" [bands]="bands()" xLabel="Operating time [h]" [xMin]="0" yLabel="T3 [°C]" [legend]="false"
-                 [height]="240" ariaLabel="Outdoor temperature" />
-      <app-chart [series]="cumP()" [bands]="bands()" xLabel="Operating time [h]" [xMin]="0" yLabel="p [bar(g)]"
-                 [height]="240" ariaLabel="Suction and discharge pressure" />
-    </div>
-  }
-</section>
