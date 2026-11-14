@@ -8,7 +8,7 @@ points, refrigerant pressures and temperatures, compressor power and setpoint, s
 wrote to process them were my first Python code; this repository turns them into one FastAPI + Angular app,
 tool by tool.
 
-## What it does (0.0.5)
+## What it does (0.1.0)
 
 - loading of the logger reports (`.xlsx` / `.csv`, both column naming variants, several files merged in time order)
 - air enthalpy at the five measuring points, `delta_i = i2 - i3`
@@ -17,6 +17,9 @@ tool by tool.
 - a 30-minute window and a single 120 s cycle in detail, with superheat from the R290 saturation temperature
 - reconstruction of the supply/exhaust flags where they were not logged
 - the hand-picked measurement windows checked against the record, steady windows proposed across the outdoor temperatures
+- COP against the outdoor temperature over the steady windows
+- lab tools: NTC thermistor characteristic, Modbus RTU scan/read/write with the frames shown byte by byte,
+  calculator of the ceramic regenerator (channels, heat transfer, pressure drop, time constant)
 - a synthetic demo record in the logger layout (the measurement data is not published)
 
 ## Running it
