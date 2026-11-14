@@ -1,0 +1,24 @@
+<header class="top">
+  <a class="brand" routerLink="/">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true">
+      @for (r of [0, 1, 2]; track r) {
+        @for (c of [0, 1, 2]; track c) {
+          <rect [attr.x]="1 + c * 8.5" [attr.y]="1 + r * 8.5" width="7" height="7" [class.core]="r === 1 && c === 1" />
+        }
+      }
+    </svg>
+    <span>HeatFlip</span>
+  </a>
+  <nav aria-label="Main">
+    <a routerLink="/" routerLinkActive="on" [routerLinkActiveOptions]="{ exact: true }">COP</a>
+  </nav>
+</header>
+
+<main class="page">
+  <router-outlet />
+</main>
+
+<footer>
+  Measurement analysis of a reversible ventilation unit with a ceramic regenerator and an R290 heat pump,
+  Politechnika Warszawska, MEiL. Version {{ version }}.
+</footer>
