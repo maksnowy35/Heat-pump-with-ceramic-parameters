@@ -1,0 +1,51 @@
+{
+  "name": "Reversible ventilation unit with ceramic regenerator and R290 heat pump",
+  "test_stand": "Institute of Heat Engineering, Warsaw University of Technology",
+  "refrigerant": {"fluid": "R290", "charge_kg": 0.8},
+  "air": {
+    "mass_flow_kg_s": 0.468,
+    "density_kg_m3": 1.2,
+    "volume_flow_m3_h": 1400,
+    "note": "1400 m3/h nominal in the thesis; max measured supply 1380 m3/h in the paper"
+  },
+  "cycle": {
+    "supply_s": 60,
+    "exhaust_s": 60,
+    "dwell_s": 2.0,
+    "note": "dwell = half of the 4 s guide-vane turn, at each reversal (paper, Eq. 1)"
+  },
+  "aux_power_w": {
+    "thesis": 450,
+    "paper": 460,
+    "note": "fan + automation, constant over the whole range of outdoor temperatures"
+  },
+  "channels": {
+    "T1..T5": "air temperatures, °C (positions in Fig. 1 of the thesis)",
+    "RH1..RH5": "relative humidity at the same points, fraction 0-1",
+    "p_suction": "compressor suction, bar(g)", "p_discharge": "compressor discharge, bar(g)",
+    "P_comp": "compressor active power, W",
+    "roles": {"outdoor": "T3", "heating_capacity": "m (i2 - i3) during supply"},
+    "note": "roles as used in the thesis; exact sensor positions to be confirmed against the logging scripts"
+  },
+  "ceramic": {
+    "block_side_m": 0.150,
+    "frame_m": 0.0002,
+    "cells_per_side": 60,
+    "channel_to_wall": 8.0,
+    "rows": [
+      {"name": "top", "n_blocks": 15, "length_m": 0.300, "block_mass_kg": 6.15},
+      {"name": "bottom", "n_blocks": 15, "length_m": 0.074, "block_mass_kg": 1.39}
+    ],
+    "gap_between_rows_m": 0.019,
+    "cp_j_kgk": 880.0,
+    "note": "bottom row 74 mm in the thesis, 72 mm in the paper; cp = 99 528 J/K / 113.1 kg (paper)"
+  },
+  "instruments": [
+    {"quantity": "temperature", "instrument": "NTC class B", "limit_error": "±0.425 °C", "u": "0.245 °C"},
+    {"quantity": "relative humidity", "instrument": "SHT20", "limit_error": "±3 % RH (20-80 %), ±4.5 % outside", "u": "1.732 % RH"},
+    {"quantity": "air flow", "instrument": "IRIS 250", "limit_error": "±5 %", "u": "2.887 %"},
+    {"quantity": "air differential pressure", "instrument": "DPT250-R8", "limit_error": "±1 % of range", "u": "±8 Pa"},
+    {"quantity": "refrigerant pressure", "instrument": "Carel SPKT0041-DO", "limit_error": "±1 %", "u": "±0.182 bar"},
+    {"quantity": "electrical power", "instrument": "Lumel N27P", "limit_error": "±0.2 % of range", "u": "1.732 W"}
+  ]
+}

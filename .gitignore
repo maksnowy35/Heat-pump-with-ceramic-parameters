@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+.angular/
+
+# measurement data (raw logs stay local, only synthetic samples are committed)
+data/raw/
+*.xlsx
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
