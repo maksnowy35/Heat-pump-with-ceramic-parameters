@@ -180,3 +180,132 @@ class CandidateOut(BaseModel):
     t3_std: float
     p_std: float
     score: float
+
+
+# ---- lab tools ----
+
+class NtcRequest(BaseModel):
+    table: list[tuple[float, float]] | None = Field(None, description="[[t °C, R Ω], ...]; default NTC 5k")
+    resistance: float | None = Field(None, gt=0)
+    current_ma: float | None = Field(None, gt=0)
+    supply_v: float = Field(9.0, gt=0)
+
+
+class NtcModel(BaseModel):
+    name: str
+    params: dict[str, float]
+    max_error: float
+
+
+class NtcReading(BaseModel):
+    resistance: float
+    t_linear: Num
+    t_log: Num
+    t_beta: float
+    t_steinhart_hart: float
+
+
+class NtcResponse(BaseModel):
+    table: list[tuple[float, float]]
+    models: list[NtcModel]
+    b_values: dict[str, float]
+    datasheet_b: dict[str, float]
+    curve_t: list[float]
+    curve_r: dict[str, list[float]]
+    interp_t: list[float]
+    interp_error: list[float]          # linear-in-R minus log interpolation, K
+    reading: NtcReading | None
+
+
+class ModbusStatus(BaseModel):
+    port: str
+    simulated: bool
+    baudrate: int
+    parity: str
+    timeout: float
+    writes_allowed: bool
+
+
+class ModbusRead(BaseModel):
+    unit: int = Field(1, ge=1, le=247)
+    kind: str = Field("input", pattern="^(input|holding)$")
+    address: int = Field(4036, ge=0, le=65535)
+    count: int = Field(1, ge=1, le=125)
+
+
+class ModbusWrite(BaseModel):
+    unit: int = Field(1, ge=1, le=247)
+    address: int = Field(4004, ge=0, le=65535)
+    value: int = Field(2, ge=0, le=65535)
+
+
+class ModbusScan(BaseModel):
+    unit_from: int = Field(1, ge=1, le=247)
+    unit_to: int = Field(31, ge=1, le=247)
+    address: int = Field(3130, ge=0, le=65535)
+
+
+class FrameByte(BaseModel):
+    hex: str
+    field: str
+
+
+class ModbusExchange(BaseModel):
+    ok: bool
+    values: list[int]
+    error: str | None
+    request: str
+    response: str | None
+    request_fields: list[FrameByte]
+    response_fields: list[FrameByte]
+
+
+class ScanHit(BaseModel):
+    unit: int
+    kind: str
+    value: int
+
+
+class RegeneratorRequest(BaseModel):
+    mass_flow: float = Field(0.468, gt=0, le=5)
+    cells: int = Field(60, ge=5, le=200)
+    channel_to_wall: float = Field(8.0, gt=0.5, le=50)
+    length_top: float = Field(0.300, gt=0, le=2)
+    length_bottom: float = Field(0.074, ge=0, le=2)
+    heat_capacity: float | None = Field(None, gt=0, description="J/K; null = from the block masses")
+    half_cycle: float = Field(60, gt=1, le=600)
+    fan_efficiency: float = Field(0.5, gt=0, le=1)
+
+
+class RegeneratorRow(BaseModel):
+    name: str
+    n_channels: int
+    wetted_area: float
+    hA: float
+    dp: float
+    heat_capacity: float
+
+
+class RegeneratorResponse(BaseModel):
+    values: dict[str, float]
+    rows: list[RegeneratorRow]
+    thesis: dict[str, float]
+    curve_t: list[float]
+    captured_tau: list[float]
+    captured_bed: list[float]
+
+
+class CopTRequest(BaseModel):
+    windows: list[datetime] | None = Field(None, description="window starts; default: the suggested steady windows")
+    minutes: float = Field(30, gt=0, le=240)
+    cop: CopParams = CopParams()
+
+
+class CopTPoint(BaseModel):
+    start: str
+    t_out: Num
+    cop: Num
+    cop_total: Num
+    p_comp: Num
+    valid: int
+    blocks: int

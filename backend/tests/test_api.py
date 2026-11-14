@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from app.core import dataset
@@ -79,3 +80,38 @@ def test_window_finder():
     assert [o["status"] for o in out] == ["ok", "missing"]
     sug = client.get(f"{API}/datasets/demo/windows/suggest?n=5").json()
     assert 3 <= len(sug) <= 5
+
+
+def test_ntc_endpoint():
+    body = client.post(f"{API}/ntc", json={"current_ma": 2.5, "supply_v": 9}).json()
+    assert body["reading"]["t_linear"] == pytest.approx(34.26, abs=0.01)
+    assert body["b_values"]["B25/50"] == pytest.approx(3470, abs=1)
+    assert body["b_values"]["B25/100"] == pytest.approx(3526, abs=1)
+    assert 0.4 < max(body["interp_error"]) < 0.7
+
+
+def test_ntc_rejects_ptc_table():
+    assert client.post(f"{API}/ntc", json={"table": [[0, 100], [10, 110], [20, 120]]}).status_code == 422
+
+
+def test_modbus_simulated():
+    assert client.get(f"{API}/modbus").json()["simulated"]
+    r = client.post(f"{API}/modbus/read", json={"unit": 1, "kind": "input", "address": 4036}).json()
+    assert r["ok"] and r["request"] == "01 04 0F C4 00 01 73 23"
+    assert client.post(f"{API}/modbus/write", json={"unit": 1, "address": 4004, "value": 2}).json()["ok"]
+    hits = client.post(f"{API}/modbus/scan", json={"unit_from": 1, "unit_to": 31, "address": 3130}).json()
+    assert [h["unit"] for h in hits] == [1]
+
+
+def test_regenerator_endpoint():
+    body = client.post(f"{API}/regenerator", json={"heat_capacity": 95000}).json()
+    assert body["values"]["tau"] == pytest.approx(12.5, abs=0.05)
+    assert body["thesis"]["dp"] == 58.6 and len(body["rows"]) == 2
+
+
+def test_cop_vs_tout():
+    pts = client.post(f"{API}/datasets/demo/cop-vs-tout", json={}).json()
+    assert len(pts) >= 5
+    temps = [p["t_out"] for p in pts]
+    assert temps == sorted(temps)
+    assert pts[0]["cop_total"] > pts[-1]["cop_total"]

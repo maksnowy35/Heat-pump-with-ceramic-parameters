@@ -1,15 +1,20 @@
+import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from . import __version__, store
-from .core import cop, dataset, phases, series, window, windows
+from .core import cop, dataset, modbus, ntc, phases, regenerator, series, window, windows
 from .schemas import (
     Block, BlocksRequest, BlocksResponse, BlockSummary, CandidateOut, CheckRequest, CopParams,
     CoverageOut, CumulativeRequest, CumulativeResponse, CycleTotals, DatasetInfo, Gap, PhasePlan,
     PhasePreview, PhaseSuggestion, Segment, WindowRequest, WindowResponse,
+    CopTPoint, CopTRequest, FrameByte, ModbusExchange, ModbusRead, ModbusScan, ModbusStatus, ModbusWrite,
+    NtcModel, NtcReading, NtcRequest, NtcResponse, RegeneratorRequest, RegeneratorResponse, RegeneratorRow,
+    ScanHit,
 )
 
 router = APIRouter()
@@ -227,3 +232,161 @@ def reset(ds_id: str):
         raise HTTPException(422, "only the demo record can be reset")
     store.reset_demo()
     return _info(_ds(store.DEMO))
+
+
+# ---------------------------------------------------------------- COP against outdoor temperature
+
+@router.post("/datasets/{ds_id}/cop-vs-tout", response_model=list[CopTPoint])
+def cop_vs_tout(ds_id: str, req: CopTRequest):
+    df = _ds(ds_id).frame
+    starts = [pd.Timestamp(w).tz_localize(None) for w in req.windows] if req.windows else \
+        [pd.Timestamp(c.start) for c in windows.suggest(df, int(req.minutes), 10)]
+    out = []
+    for t0 in starts:
+        w = df.loc[t0: t0 + pd.Timedelta(minutes=req.minutes)]
+        if w.empty:
+            continue
+        s = cop.block_summary(cop.blocks(w, _settings(req.cop)))
+        out.append(CopTPoint(start=t0.isoformat(), t_out=_num(s["t_out"]), cop=_num(s["cop"]),
+                             cop_total=_num(s["cop_total"]), p_comp=_num(s["p_comp"]),
+                             valid=s["valid"], blocks=s["blocks"]))
+    return sorted(out, key=lambda p: (p.t_out is None, p.t_out))
+
+
+# ---------------------------------------------------------------- NTC
+
+DATA = Path(__file__).resolve().parent / "data"
+NTC5K = json.loads((DATA / "ntc5k.json").read_text(encoding="utf-8"))
+
+
+@router.get("/ntc/preset")
+def ntc_preset():
+    return NTC5K
+
+
+@router.post("/ntc", response_model=NtcResponse)
+def ntc_analyse(req: NtcRequest):
+    table = sorted(req.table or [tuple(x) for x in NTC5K["table"]])
+    if len(table) < 3:
+        raise HTTPException(422, "the R-T table needs at least 3 points")
+    t = np.array([p[0] for p in table])
+    r = np.array([p[1] for p in table])
+    if np.any(r <= 0) or np.any(np.diff(r) >= 0):
+        raise HTTPException(422, "resistance must be positive and fall with temperature (NTC)")
+    beta = ntc.fit_beta(t, r)
+    sh = ntc.fit_steinhart_hart(t, r)
+    by_t = dict(zip(t.tolist(), r.tolist()))
+    b_values = {}
+    for t2 in (50.0, 85.0, 100.0):
+        if 25.0 in by_t and t.min() <= t2 <= t.max():
+            r2 = by_t.get(t2)
+            if r2 is None:  # between table points: interpolate ln R against 1/T
+                r2 = float(np.exp(np.interp(1 / (t2 + 273.15), 1 / (t[::-1] + 273.15), np.log(r[::-1]))))
+            b_values[f"B25/{t2:.0f}"] = ntc.beta_between(25.0, by_t[25.0], t2, r2)
+
+    grid = np.linspace(t.min(), t.max(), 121)
+    mids, errs = [], []
+    for x in np.linspace(t.min(), t.max(), 241):
+        rx = float(np.exp(np.interp(1 / (x + 273.15), 1 / (t[::-1] + 273.15), np.log(r[::-1]))))
+        mids.append(round(float(x), 2))
+        errs.append(round(ntc.table_temperature(table, rx) - ntc.log_table_temperature(table, rx), 4))
+
+    reading = None
+    rr = req.resistance or (ntc.resistance_from_current(req.current_ma, req.supply_v) if req.current_ma else None)
+    if rr:
+        reading = NtcReading(
+            resistance=rr, t_linear=_num(ntc.table_temperature(table, rr)),
+            t_log=_num(ntc.log_table_temperature(table, rr)),
+            t_beta=float(beta.temperature(rr)), t_steinhart_hart=float(sh.temperature(rr)),
+        )
+    return NtcResponse(
+        table=table,
+        models=[
+            NtcModel(name="Beta", params={"R25": beta.r25, "B": beta.beta},
+                     max_error=float(np.abs(ntc.residuals(beta, t, r)).max())),
+            NtcModel(name="Steinhart-Hart", params={"A": sh.a, "B": sh.b, "C": sh.c},
+                     max_error=float(np.abs(ntc.residuals(sh, t, r)).max())),
+        ],
+        b_values=b_values,
+        datasheet_b=NTC5K["datasheet_beta"] if req.table is None else {},
+        curve_t=series.values(grid, 2),
+        curve_r={"beta": series.values(beta.resistance(grid), 1),
+                 "steinhart_hart": series.values(sh.resistance(grid), 1)},
+        interp_t=mids, interp_error=errs, reading=reading,
+    )
+
+
+# ---------------------------------------------------------------- Modbus
+
+_SIM = modbus.Simulator()
+
+
+def _link():
+    s = modbus.settings_from_env()
+    return _SIM if s.port == "simulator" else modbus.Serial(s)
+
+
+def _exchange(x: modbus.Exchange) -> ModbusExchange:
+    return ModbusExchange(
+        ok=x.ok, values=x.values, error=x.error,
+        request=x.request.hex(" ").upper(), response=x.response.hex(" ").upper() if x.response else None,
+        request_fields=[FrameByte(**f) for f in modbus.describe(x.request)],
+        response_fields=[FrameByte(**f) for f in modbus.describe(x.response)] if x.response else [],
+    )
+
+
+@router.get("/modbus", response_model=ModbusStatus)
+def modbus_status():
+    s = modbus.settings_from_env()
+    return ModbusStatus(port=s.port, simulated=s.port == "simulator", baudrate=s.baudrate, parity=s.parity,
+                        timeout=s.timeout, writes_allowed=modbus.writes_allowed())
+
+
+@router.post("/modbus/read", response_model=ModbusExchange)
+def modbus_read(req: ModbusRead):
+    return _exchange(_link().read(req.unit, req.kind, req.address, req.count))
+
+
+@router.post("/modbus/write", response_model=ModbusExchange)
+def modbus_write(req: ModbusWrite):
+    if not modbus.writes_allowed():
+        raise HTTPException(403, "writing to a real controller is off; set MODBUS_ALLOW_WRITE=1 to allow it")
+    return _exchange(_link().write(req.unit, req.address, req.value))
+
+
+@router.post("/modbus/scan", response_model=list[ScanHit])
+def modbus_scan(req: ModbusScan):
+    if req.unit_to < req.unit_from or req.unit_to - req.unit_from > 64:
+        raise HTTPException(422, "scan at most 64 unit ids, from <= to")
+    return [ScanHit(**h) for h in modbus.scan(_link(), range(req.unit_from, req.unit_to + 1), req.address)]
+
+
+# ---------------------------------------------------------------- regenerator
+
+REGEN_THESIS = json.loads((DATA / "regenerator_thesis.json").read_text(encoding="utf-8"))
+
+
+@router.post("/regenerator", response_model=RegeneratorResponse)
+def regenerator_calc(req: RegeneratorRequest):
+    rows = list(regenerator.RegeneratorInput().rows)
+    rows[0] = regenerator.Row(rows[0].n_blocks, req.length_top, rows[0].block_mass * req.length_top / 0.300, "top")
+    if req.length_bottom > 0:
+        rows[1] = regenerator.Row(rows[1].n_blocks, req.length_bottom,
+                                  rows[1].block_mass * req.length_bottom / 0.074, "bottom")
+    else:
+        rows = rows[:1]
+    inp = regenerator.RegeneratorInput(
+        cells=req.cells, channel_to_wall=req.channel_to_wall, rows=tuple(rows), mass_flow=req.mass_flow,
+        heat_capacity=req.heat_capacity, half_cycle=req.half_cycle, fan_efficiency=req.fan_efficiency,
+    )
+    res = regenerator.compute(inp)
+    d = regenerator.to_dict(res)
+    rows_out = [RegeneratorRow(**{k: r[k] for k in RegeneratorRow.model_fields}) for r in d.pop("rows")]
+    tt = np.linspace(0, max(240.0, 2 * req.half_cycle), 121)
+    return RegeneratorResponse(
+        values={k: float(v) for k, v in d.items()}, rows=rows_out,
+        thesis={k: float(v) for k, v in REGEN_THESIS.items() if k != "note"},
+        curve_t=series.values(tt, 1),
+        captured_tau=series.values(1 - np.exp(-tt / res.tau), 4),
+        captured_bed=series.values(1 - np.exp(-tt / res.tau_bed), 4),
+    )
