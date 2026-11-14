@@ -5,10 +5,11 @@ import pandas as pd
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from . import __version__, store
-from .core import cop, dataset, series
+from .core import cop, dataset, phases, series, window, windows
 from .schemas import (
-    Block, BlocksRequest, BlocksResponse, BlockSummary, CopParams, CumulativeRequest,
-    CumulativeResponse, DatasetInfo, Gap, Segment,
+    Block, BlocksRequest, BlocksResponse, BlockSummary, CandidateOut, CheckRequest, CopParams,
+    CoverageOut, CumulativeRequest, CumulativeResponse, CycleTotals, DatasetInfo, Gap, PhasePlan,
+    PhasePreview, PhaseSuggestion, Segment, WindowRequest, WindowResponse,
 )
 
 router = APIRouter()
@@ -129,3 +130,100 @@ def cumulative(ds_id: str, req: CumulativeRequest):
         final_cop=_num(c["cop"].iloc[-1]),
         final_cop_total=_num(c["cop_total"].iloc[-1]),
     )
+
+
+WINDOW_COLUMNS = [
+    "t1", "t2", "t3", "t4", "t5", "rh_1", "rh_2", "rh_3", "rh_4", "rh_5", "i_1", "i_2", "i_3", "i_4", "i_5",
+    "p_ssania", "p_tloczenia", "t_ssania", "t_tloczenie", "t_parowania", "t_skraplania",
+    "t_sat_suction", "t_sat_discharge", "superheat", "superheat_ctrl", "Moc_Czynna", "p_total",
+    "nast_spr", "q_kw", "cop_running", "cop_total_running",
+]
+
+
+@router.post("/datasets/{ds_id}/window", response_model=WindowResponse)
+def window_series(ds_id: str, req: WindowRequest):
+    df = _ds(ds_id).frame
+    start = pd.Timestamp(req.start).tz_localize(None)
+    if req.align_to_cycle:
+        aligned = window.cycle_start(df, start)
+        if aligned is None:
+            raise HTTPException(422, f"no supply half-cycle starts after {start}")
+        start = aligned
+    w = window.series(df, start, req.minutes, _settings(req.cop))
+    if w.empty:
+        raise HTTPException(422, f"no data between {start} and {start + pd.Timedelta(minutes=req.minutes)}")
+    totals = window.cycle_totals(w, _settings(req.cop))
+    view = series.bucket(w[WINDOW_COLUMNS + ["seconds", "nawiew"]], req.max_points)
+    return WindowResponse(
+        start=w.index[0].isoformat(), end=w.index[-1].isoformat(), rows=len(w),
+        seconds=series.values((view.index - w.index[0]).total_seconds(), 1),
+        supply=series.values(view["nawiew"], 2),
+        series={c: series.values(view[c], 4) for c in WINDOW_COLUMNS},
+        totals=CycleTotals(**totals),
+    )
+
+
+@router.get("/datasets/{ds_id}/phases", response_model=PhaseSuggestion)
+def phase_suggestion(ds_id: str):
+    df = _ds(ds_id).frame
+    plan = phases.suggest(df)
+    missing = int((df["nawiew"].isna() | df["wywiew"].isna()).sum())
+    return PhaseSuggestion(
+        plan=PhasePlan(anchor=plan.anchor.to_pydatetime(), supply=plan.supply, half_s=plan.half_s) if plan else None,
+        missing=missing, half_s_logged=_num(phases.half_cycle(df)),
+    )
+
+
+@router.post("/datasets/{ds_id}/phases/preview", response_model=PhasePreview)
+def phase_preview(ds_id: str, plan: PhasePlan, minutes: float = 8):
+    df = _ds(ds_id).frame
+    anchor = pd.Timestamp(plan.anchor).tz_localize(None)
+    rebuilt = phases.reconstruct(df, anchor, plan.supply, plan.half_s)
+    lo, hi = anchor - pd.Timedelta(minutes=minutes * 0.75), anchor + pd.Timedelta(minutes=minutes * 0.25)
+    sel = (df.index >= lo) & (df.index < hi)
+    w, r = df[sel], rebuilt[sel]
+    if w.empty:
+        raise HTTPException(422, "no data around the anchor")
+    filled = int(df["nawiew"].isna().sum() - rebuilt["nawiew"].isna().sum())
+    return PhasePreview(
+        seconds=series.values((w.index - anchor).total_seconds(), 1), t2=series.values(w["t2"], 2),
+        supply_logged=series.values(w["nawiew"], 0), supply_rebuilt=series.values(r["nawiew"], 0),
+        origin=anchor.isoformat(), filled=filled,
+    )
+
+
+@router.post("/datasets/{ds_id}/phases/apply", response_model=DatasetInfo)
+def phase_apply(ds_id: str, plan: PhasePlan):
+    ds = _ds(ds_id)
+    anchor = pd.Timestamp(plan.anchor).tz_localize(None)
+    frame = phases.reconstruct(ds.frame, anchor, plan.supply, plan.half_s)
+    return _info(store.replace(ds.id, frame))
+
+
+@router.post("/datasets/{ds_id}/windows/check", response_model=list[CoverageOut])
+def windows_check(ds_id: str, req: CheckRequest):
+    df = _ds(ds_id).frame
+    out = []
+    for w in req.windows:
+        c = windows.check(df, pd.Timestamp(w.start).tz_localize(None), w.minutes, req.tolerance_s)
+        fields = dict(c.__dict__)
+        fields["t3_mean"] = _num(c.t3_mean)
+        fields["t3_std"] = _num(c.t3_std)
+        out.append(CoverageOut(**fields))
+    return out
+
+
+@router.get("/datasets/{ds_id}/windows/suggest", response_model=list[CandidateOut])
+def windows_suggest(ds_id: str, minutes: int = 30, n: int = 8):
+    if not (5 <= minutes <= 240 and 1 <= n <= 30):
+        raise HTTPException(422, "minutes must be 5-240 and n 1-30")
+    return [CandidateOut(**c.__dict__) for c in windows.suggest(_ds(ds_id).frame, minutes, n)]
+
+
+@router.post("/datasets/{ds_id}/reset", response_model=DatasetInfo)
+def reset(ds_id: str):
+    """Regenerate the demo record (undo reconstructed flags)."""
+    if ds_id != store.DEMO:
+        raise HTTPException(422, "only the demo record can be reset")
+    store.reset_demo()
+    return _info(_ds(store.DEMO))

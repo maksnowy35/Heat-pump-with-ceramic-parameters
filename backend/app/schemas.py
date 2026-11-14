@@ -100,3 +100,83 @@ class CumulativeResponse(BaseModel):
     gaps: list[Segment]
     final_cop: Num
     final_cop_total: Num
+
+
+class WindowRequest(BaseModel):
+    start: datetime
+    minutes: float = Field(30, gt=0, le=24 * 60)
+    align_to_cycle: bool = Field(False, description="move the start to the next supply half-cycle")
+    cop: CopParams = CopParams()
+    max_points: int = Field(3000, ge=100, le=20000)
+
+
+class CycleTotals(BaseModel):
+    q_kwh: float
+    w_kwh: float
+    w_total_kwh: float
+    cop: Num
+    cop_total: Num
+
+
+class WindowResponse(BaseModel):
+    start: str
+    end: str
+    rows: int
+    seconds: list[Num]
+    supply: list[Num]
+    series: dict[str, list[Num]]
+    totals: CycleTotals
+
+
+class PhasePlan(BaseModel):
+    anchor: datetime
+    supply: bool = Field(description="state that starts at the anchor")
+    half_s: float = Field(60, gt=1, le=3600)
+
+
+class PhaseSuggestion(BaseModel):
+    plan: PhasePlan | None
+    missing: int
+    half_s_logged: Num
+
+
+class PhasePreview(BaseModel):
+    seconds: list[Num]
+    t2: list[Num]
+    supply_logged: list[Num]
+    supply_rebuilt: list[Num]
+    origin: str
+    filled: int
+
+
+class WindowSpec(BaseModel):
+    start: datetime
+    minutes: float = Field(30, gt=0, le=24 * 60)
+
+
+class CheckRequest(BaseModel):
+    windows: list[WindowSpec]
+    tolerance_s: float = Field(2, ge=0, le=600)
+
+
+class CoverageOut(BaseModel):
+    start: str
+    end: str
+    first: str | None
+    rows: int
+    coverage: float
+    max_gap_s: float
+    flags: float
+    compressor: float
+    t3_mean: Num
+    t3_std: Num
+    status: str
+
+
+class CandidateOut(BaseModel):
+    start: str
+    minutes: int
+    t3_mean: float
+    t3_std: float
+    p_std: float
+    score: float

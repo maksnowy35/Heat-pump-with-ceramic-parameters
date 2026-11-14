@@ -50,3 +50,32 @@ def test_upload_excel():
 def test_upload_garbage():
     r = client.post(f"{API}/datasets", files=[("files", ("x.csv", b"a,b\n1,2\n", "text/csv"))])
     assert r.status_code == 422
+
+
+def test_window_and_cycle():
+    r = client.post(f"{API}/datasets/demo/window", json={"start": "2025-02-22T08:24:58", "minutes": 30})
+    assert r.status_code == 200
+    body = r.json()
+    assert len(body["seconds"]) == len(body["series"]["t1"]) > 800
+    c = client.post(f"{API}/datasets/demo/window",
+                    json={"start": "2025-02-22T08:24:58", "minutes": 2, "align_to_cycle": True}).json()
+    assert c["rows"] == 60 and c["start"] == "2025-02-22T08:26:00"
+    assert 2.5 < c["totals"]["cop_total"] < 5
+
+
+def test_phase_tools_on_demo():
+    s = client.get(f"{API}/datasets/demo/phases").json()
+    assert s["missing"] == 3600 and s["plan"]["half_s"] == 60
+    prev = client.post(f"{API}/datasets/demo/phases/preview", json=s["plan"]).json()
+    assert prev["filled"] == 3600 and len(prev["t2"]) == len(prev["supply_rebuilt"])
+    info = client.post(f"{API}/datasets/demo/phases/apply", json=s["plan"]).json()
+    assert info["missing_flags"] == 0
+    assert client.post(f"{API}/datasets/demo/reset").json()["missing_flags"] == 3600
+
+
+def test_window_finder():
+    out = client.post(f"{API}/datasets/demo/windows/check", json={"windows": [
+        {"start": "2025-02-22T08:24:58"}, {"start": "2025-03-25T17:13:02"}]}).json()
+    assert [o["status"] for o in out] == ["ok", "missing"]
+    sug = client.get(f"{API}/datasets/demo/windows/suggest?n=5").json()
+    assert 3 <= len(sug) <= 5
