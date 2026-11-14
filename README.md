@@ -8,12 +8,15 @@ points, refrigerant pressures and temperatures, compressor power and setpoint, s
 wrote to process them were my first Python code; this repository turns them into one FastAPI + Angular app,
 tool by tool.
 
-## Version 0.0.1
+## What it does (0.0.5)
 
 - loading of the logger reports (`.xlsx` / `.csv`, both column naming variants, several files merged in time order)
 - air enthalpy at the five measuring points, `delta_i = i2 - i3`
 - COP in 2-minute blocks (one supply + one exhaust half-cycle), with and without the constant fan/automation power
 - running COP over the whole record, outdoor temperature and refrigerant pressures
+- a 30-minute window and a single 120 s cycle in detail, with superheat from the R290 saturation temperature
+- reconstruction of the supply/exhaust flags where they were not logged
+- the hand-picked measurement windows checked against the record, steady windows proposed across the outdoor temperatures
 - a synthetic demo record in the logger layout (the measurement data is not published)
 
 ## Running it
