@@ -47,5 +47,15 @@ export const routes: Routes = [
     title: 'HeatFlip · Ceramic regenerator',
     loadComponent: () => import('./pages/regenerator/regenerator').then(m => m.RegeneratorPage),
   },
+  {
+    path: 'device',
+    title: 'HeatFlip · Device and measurements',
+    loadComponent: () => import('./pages/device/device').then(m => m.DevicePage),
+  },
+  {
+    path: 'model',
+    title: 'HeatFlip · Model and sources',
+    loadComponent: () => import('./pages/model/model').then(m => m.ModelPage),
+  },
   { path: '**', redirectTo: '' },
 ];

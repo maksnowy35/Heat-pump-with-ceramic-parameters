@@ -92,6 +92,7 @@ export const TOOLS: ToolInfo[] = [
       'As in the scripts, the constant 0.45 kW is added on exhaust rows only.',
       'Grey bands: compressor power zero for more than 2 h. Red bands: no data.',
       'Long records are averaged into ~1500 points for the browser.',
+      'Corrected mode: mass flow 0.468 kg/s, the constant power on every row, the time step capped at 10 s after a gap.',
     ],
     formulas: [
       'Q = 0.389 · Δi · Δt   (supply rows)',
@@ -154,6 +155,7 @@ export const TOOLS: ToolInfo[] = [
       'Blue: COP of the compressor alone. Green: COP with the constant 0.45 kW of the fan and automation. Red: compressor power.',
       'A block is not trusted when the highest compressor setpoint in it is below 0.20 or its COP is outside 1.5–12; it is drawn dotted at the level of the previous trusted block.',
       'Blocks cut by the window edges are drawn, but left out of the averages.',
+      'Corrected mode: mass flow 0.468 kg/s instead of 0.389 and one block per cycle, from the start of its supply half-cycle.',
     ],
     formulas: [
       'Q = 0.389 · Δi · Δt   (supply, setpoint > 0)',

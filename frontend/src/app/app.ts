@@ -8,5 +8,5 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
   styleUrl: './app.scss'
 })
 export class App {
-  readonly version = '0.1.0';
+  readonly version = '0.2.0';
 }

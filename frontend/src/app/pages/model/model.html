@@ -1,0 +1,104 @@
+<header class="head">
+  <h1>Model and sources</h1>
+  <p>How every number in the app is computed, where the original scripts did it differently, and the literature.</p>
+  <nav class="toc" aria-label="On this page">
+    <a routerLink="/model" fragment="chain">Calculation chain</a>
+    <a routerLink="/model" fragment="audit">Scripts vs corrected</a>
+    <a routerLink="/model" fragment="limits">Limitations</a>
+    <a routerLink="/model" fragment="sources">Sources</a>
+  </nav>
+</header>
+
+<section id="chain">
+  <h2>Calculation chain</h2>
+  <div class="steps">
+    <article>
+      <h3>1 · Moist air at each point</h3>
+      <code>p_ws(t): Hyland–Wexler, over liquid water</code>
+      <code>x = 0.621945 · φ·p_ws / (p − φ·p_ws)</code>
+      <code>i = 1.006·t + x·(2501 + 1.86·t)   [kJ/kg dry air]</code>
+      <p>p = 101 325 Pa. RH is taken over water also below 0 °C, as capacitive sensors report it. Agrees with CoolProp HAPropsSI within 0.15 kJ/kg (Δi within 0.05).</p>
+    </article>
+    <article>
+      <h3>2 · Heat and electrical energy</h3>
+      <code>Q = flow · (i₂ − i₃) · Δt   supply rows, u_comp &gt; 0</code>
+      <code>W_comp = P_comp · Δt   supply and exhaust rows</code>
+      <code>W = (P_comp + 0.45 kW) · Δt</code>
+      <p>flow = 0.389 as in the scripts, 0.468 kg/s in corrected mode. Heat is the enthalpy rise of the supply air over the outdoor air.</p>
+    </article>
+    <article>
+      <h3>3 · COP</h3>
+      <code>COP_block = ΣQ / ΣW   over one 2-min block (cycle)</code>
+      <code>COP(t) = ΣQ / ΣW   from the first row (running)</code>
+      <p>A block is trusted when its highest compressor setpoint is ≥ 0.20 and its COP lies in 1.5–12. Window values average the complete, trusted blocks.</p>
+    </article>
+    <article>
+      <h3>4 · Refrigerant side</h3>
+      <code>t_evap = T_sat,R290(p_suc + p_atm)</code>
+      <code>t_cond = T_sat,R290(p_dis + p_atm)</code>
+      <code>superheat = t_suc − t_evap</code>
+      <p>Pressures are gauge pressures from the Carel transducers; saturation from CoolProp.</p>
+    </article>
+    <article>
+      <h3>5 · Ceramic regenerator</h3>
+      <code>p = L_in/60, a = 8p/9, Re = ρva/μ</code>
+      <code>h = 3.61·k/a,  Δp = (56.9/Re)(L/a)ρv²/2</code>
+      <code>τ = C/(hA),  τ_air = C/(ṁ·c_p)</code>
+      <p>Laminar, fully developed flow in square ducts (Shah and London). No minor losses, no conduction along the channels.</p>
+    </article>
+    <article>
+      <h3>6 · Regenerator effectiveness (reference)</h3>
+      <code>η_θ = ∫(θ₂₂ − θ₂₁)dt / ∫(θ₁₁ − θ₂₁)dt · ṁ₂₂/ṁ₁₁</code>
+      <p>PN-EN 13141-8, as used in the paper for the runs of the regenerator alone (> 90 % at −15…+7 °C). The heat pump records in this app do not separate the regenerator, so η is not computed here.</p>
+    </article>
+  </div>
+</section>
+
+<section id="audit" class="section">
+  <h2>Scripts vs corrected</h2>
+  <p class="intro">
+    The tools reproduce the original scripts by default (<b>as in the scripts</b>), so the results match the thesis.
+    Switching to <b>corrected</b> fixes the slips below that change numbers; the others are fixed or shown in their tool.
+  </p>
+  @for (a of audit; track a.topic) {
+    <article class="item">
+      <header>
+        <h3>{{ a.topic }}</h3>
+        <span class="pill" [class.ok]="!a.mode" [class.partial]="a.mode">{{ a.mode ? 'corrected mode' : 'always' }}</span>
+      </header>
+      <dl>
+        <dt>Scripts / thesis</dt><dd>{{ a.scripts }}</dd>
+        <dt>Why it matters</dt><dd>{{ a.why }}</dd>
+        <dt>Here</dt><dd>{{ a.now }} @if (a.link) { <a [routerLink]="a.link.route">{{ a.link.label }} →</a> }</dd>
+        <dt>Effect</dt><dd>{{ a.effect }}</dd>
+      </dl>
+    </article>
+  }
+</section>
+
+<section id="limits" class="section">
+  <h2>Limitations</h2>
+  <ul class="limits">
+    <li>The demo record is synthetic: it has the layout and the typical behaviour of the logger reports, not measured values. The measured results quoted on the pages come from the thesis and the paper.</li>
+    <li>The air mass flow is a constant (1400 m³/h). It is not logged with every row, so changes of the fan speed do not enter Q.</li>
+    <li>Sensor positions follow Fig. 1 of the thesis; T3 is the outdoor temperature and i₂ − i₃ the heating of the supply air, as in the scripts.</li>
+    <li>No uncertainty propagation in the tools. For the instruments used, the paper gives ±8.9 % (k = 2) on the heating capacity, mostly from the air flow and humidity.</li>
+    <li>The meaning of the controller registers (3130, 4004, 4036 in the scripts) is not documented here; the Modbus tool works with raw register values.</li>
+  </ul>
+</section>
+
+<section id="sources" class="section">
+  <h2>Sources</h2>
+  <ol class="sources">
+    <li>„Analiza eksperymentalno-symulacyjna układu HVAC z blokami ceramicznymi: bilans cieplny, spadki ciśnienia i rekomendacje sterowania”, master's project thesis, Politechnika Warszawska, MEiL, Zakład Chłodnictwa i Energetyki Budynku.</li>
+    <li>K. Katana, A. Grzebielec, A. Szelągowski, M. Kruk, K. Bruzi, Experimental study of a reversible ventilation–heat pump system with a ceramic regenerator, <i>Archives of Thermodynamics</i> 47(1), 2026.</li>
+    <li>ASHRAE Handbook – Fundamentals, chapter 1: Psychrometrics, ASHRAE, 2017.</li>
+    <li>I. H. Bell, J. Wronski, S. Quoilin, V. Lemort, Pure and pseudo-pure fluid thermophysical property evaluation and the open-source thermophysical property library CoolProp, <i>Industrial &amp; Engineering Chemistry Research</i> 53(6), 2014, 2498–2508.</li>
+    <li>R. K. Shah, A. L. London, <i>Laminar Flow Forced Convection in Ducts</i>, Academic Press, 1978.</li>
+    <li>J. S. Steinhart, S. R. Hart, Calibration curves for thermistors, <i>Deep-Sea Research</i> 15(4), 1968, 497–503.</li>
+    <li>IEC 60539-1:2022, Directly heated negative temperature coefficient thermistors – Part 1: Generic specification.</li>
+    <li>PN-EN 13141-8:2014, Ventilation for buildings – Performance testing of components/products for residential ventilation – Part 8: unducted mechanical supply and exhaust units.</li>
+    <li>Modbus Organization, <i>MODBUS over Serial Line – Specification and Implementation Guide</i> V1.02, 2006; <i>MODBUS Application Protocol Specification</i> V1.1b3, 2012.</li>
+    <li>JCGM 100:2008, Evaluation of measurement data – Guide to the expression of uncertainty in measurement.</li>
+  </ol>
+</section>
