@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.0]
+
+### Added
+- corrected mode next to the reproduction of the scripts, switchable on every analysis page: mass flow 0.468 kg/s
+  instead of the volume flow 0.389, the constant power on every row of the running COP, time step capped at 10 s
+  after a logging gap, one COP block per cycle (`"cop": {"mode": "corrected"}` in the API)
+- device page: air side of the unit with the measuring points (after Fig. 1 of the thesis), R290 circuit with the
+  pressure and temperature probes, one cycle with the flags and what the COP counts, the ceramic blocks, the measuring
+  chain from sensor to COP, the instruments and their uncertainties
+- model page: calculation chain, scripts vs corrected with the reason and the effect of every difference, limitations,
+  sources
+- Docker Compose (API + nginx serving the built frontend), frontend build in CI
+- README with screenshots
+
+### Changed
+- `pymodbus[serial]` in the requirements (the serial link was optional before)
+
 ## [0.1.0]
 
 ### Added
