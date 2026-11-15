@@ -57,3 +57,39 @@ def test_demo_record_cop_follows_its_shape():
     w = df.loc["2025-02-22 09:00":"2025-02-22 09:30"]
     s = cop.block_summary(cop.blocks(w))
     assert s["cop_total"] == pytest.approx(float(synthetic.target_cop(s["t_out"])), rel=0.05)
+
+
+# ---- corrected mode ----
+
+def test_mode_defaults():
+    assert cop.settings("scripts").flow == pytest.approx(0.389)
+    assert cop.settings("corrected").flow == pytest.approx(0.468)
+    assert cop.settings("corrected", flow=0.5).flow == 0.5
+
+
+def test_corrected_blocks_follow_the_cycles():
+    df = dataset.derive(make_record(start="2025-03-02 08:00:30"))   # record starts inside a supply phase
+    b = cop.blocks(df, cop.settings("corrected"))
+    assert b.index[0] == pd.Timestamp("2025-03-02 08:02:30")        # first supply start seen in the data
+    assert (b.index.to_series().diff().dropna().dt.total_seconds() == 120).all()
+    full = b[b["complete"]]
+    assert full["cop_total"].to_numpy() == pytest.approx(_expected_block_cop(0.45, flow=0.468), rel=0.02)
+    assert full["cop_total"].iloc[0] / _expected_block_cop(0.45) == pytest.approx(0.468 / 0.389, rel=0.02)
+
+
+def test_corrected_cumulative_counts_constant_power_all_cycle():
+    df = dataset.derive(make_record(minutes=60, start="2025-03-02 08:00:00"))
+    c = cop.cumulative(df, cop.settings("corrected"))
+    assert c["cop_total"].iloc[-1] == pytest.approx(_expected_block_cop(0.45, flow=0.468), rel=0.02)
+
+
+def test_gap_row_carries_the_gap_only_in_scripts_mode():
+    r = make_record(minutes=60, start="2025-03-02 08:00:00")
+    r = pd.concat([r.iloc[:900], r.iloc[900:].shift(10, freq="h")])     # 10 h logging gap
+    df = dataset.derive(r)
+    scripts = cop.cumulative(df, cop.settings("scripts"))["cop_total"].iloc[-1]
+    corrected = cop.cumulative(df, cop.settings("corrected"))["cop_total"].iloc[-1]
+    steady = _expected_block_cop(0.45, flow=0.468)
+    assert corrected == pytest.approx(steady, rel=0.03)
+    # one row weighted with 10 h makes the scripts' running COP the COP of that single row
+    assert abs(scripts / (0.389 / 0.468) - steady) > 0.3

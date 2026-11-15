@@ -9,11 +9,22 @@ Two views, as in the original scripts:
   * blocks      - Q and W summed in 2-minute blocks (one supply + one exhaust half-cycle),
                   COP per block with and without the constant fan/automation power;
   * cumulative  - running sums from the first row, COP = sum(Q) / sum(W), smoothed.
+
+Two modes:
+  * scripts     - exactly as the scripts computed it: flow = 0.389 (the volume flow in m3/s),
+                  constant power on exhaust rows only in the cumulative COP, dt of a row = time since
+                  the previous row (also across logging gaps), clock-aligned 2-minute bins;
+  * corrected   - flow = mass flow 0.468 kg/s, constant power over the whole cycle everywhere,
+                  dt capped at max_dt_s, blocks aligned with the cycles (from each supply start).
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 import pandas as pd
+
+
+VOLUME_FLOW = 1400 / 3600       # m3/s, the 0.389 of the scripts
+MASS_FLOW = 0.468                # kg/s = 1.2 kg/m3 * 1400 m3/h (thesis, section 3.1)
 
 
 @dataclass(frozen=True)
@@ -25,6 +36,24 @@ class CopSettings:
     cop_min: float = 1.5
     cop_max: float = 12.0
     smooth: int = 10              # rolling window (samples) for the cumulative COP
+    mode: str = "scripts"         # "scripts" | "corrected"
+    max_dt_s: float = 10.0        # corrected mode: longest time step a single row may carry
+
+    @property
+    def corrected(self) -> bool:
+        return self.mode == "corrected"
+
+
+def settings(mode: str = "scripts", **kw) -> CopSettings:
+    """Settings of a mode; `flow` defaults to the volume flow (scripts) or the mass flow (corrected)."""
+    kw = {k: v for k, v in kw.items() if v is not None}
+    kw.setdefault("flow", MASS_FLOW if mode == "corrected" else round(VOLUME_FLOW, 3))
+    return CopSettings(mode=mode, **kw)
+
+
+def dt_hours(df: pd.DataFrame, s: CopSettings) -> pd.Series:
+    """Time step of each row [h]; in corrected mode a row after a gap carries at most max_dt_s."""
+    return df["dt_h"].clip(upper=s.max_dt_s / 3600) if s.corrected else df["dt_h"]
 
 
 def _masks(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
@@ -41,20 +70,39 @@ def _fill_invalid(values: pd.Series, valid: pd.Series) -> pd.Series:
     return values.where(valid).ffill().bfill()
 
 
+def cycle_ids(df: pd.DataFrame) -> np.ndarray:
+    """Cycle number of every row: a new cycle starts where a supply half-cycle begins."""
+    sup = ((df["nawiew"] == 1) & (df["wywiew"] == 0)).to_numpy()
+    starts = np.r_[False, sup[1:] & ~sup[:-1]]
+    return np.cumsum(starts)
+
+
 def blocks(df: pd.DataFrame, s: CopSettings = CopSettings()) -> pd.DataFrame:
-    """COP in clock-aligned blocks (cop_blok30min_nowszy.py)."""
+    """COP per block: clock-aligned 2-minute bins (cop_blok30min_nowszy.py) or, in corrected mode,
+    one block per cycle starting with its supply half-cycle."""
     heat, power = _masks(df)
+    dt = dt_hours(df, s)
     w = pd.DataFrame(index=df.index)
-    w["Q"] = np.where(heat, s.flow * df["delta_i"] * df["dt_h"], 0.0)          # kWh
-    w["W"] = np.where(power, df["Moc_Czynna"] / 1000.0 * df["dt_h"], 0.0)       # kWh
-    w["W_total"] = w["W"] + np.where(power, s.aux_kw * df["dt_h"], 0.0)
+    w["Q"] = np.where(heat, s.flow * df["delta_i"] * dt, 0.0)          # kWh
+    w["W"] = np.where(power, df["Moc_Czynna"] / 1000.0 * dt, 0.0)       # kWh
+    w["W_total"] = w["W"] + np.where(power, s.aux_kw * dt, 0.0)
     w["nast_spr"] = df["nast_spr"]
     w["P"] = df["Moc_Czynna"]
     w["t3"] = df["t3"]
     w["span"] = df["dt_h"].clip(upper=60 / 3600)
+    agg = {"Q": "sum", "W": "sum", "W_total": "sum", "nast_spr": "max",
+           "P": "mean", "t3": "mean", "span": "sum"}
 
-    b = w.resample(s.block).agg({"Q": "sum", "W": "sum", "W_total": "sum", "nast_spr": "max",
-                                 "P": "mean", "t3": "mean", "span": "sum"})
+    if s.corrected:
+        ids = cycle_ids(df)
+        g = w.groupby(ids)
+        b = g.agg(agg)
+        b.index = pd.DatetimeIndex(g.apply(lambda x: x.index[0]))
+        b.index.name = df.index.name
+        if len(b) and ids[0] == 0:          # rows before the first supply start are not a cycle
+            b = b.iloc[1:]
+    else:
+        b = w.resample(s.block).agg(agg)
     b = b.dropna(subset=["nast_spr"])
     # blocks cut by the window edges (or a gap) are drawn, but left out of the averages
     b["complete"] = b["span"] * 3600 >= 0.9 * pd.Timedelta(s.block).total_seconds()
@@ -66,7 +114,11 @@ def blocks(df: pd.DataFrame, s: CopSettings = CopSettings()) -> pd.DataFrame:
     b["valid_total"] = trusted & b["cop_total"].between(s.cop_min, s.cop_max)
     b["cop_plot"] = _fill_invalid(b["cop"], b["valid"])
     b["cop_total_plot"] = _fill_invalid(b["cop_total"], b["valid_total"])
-    b["minutes"] = (b.index - b.index[0]).total_seconds() / 60 if len(b) else []
+    if len(b):
+        origin = b.index[0] if not s.corrected else df.index[0]
+        b["minutes"] = (b.index - origin).total_seconds() / 60
+    else:
+        b["minutes"] = []
     return b
 
 
@@ -88,13 +140,16 @@ def block_summary(b: pd.DataFrame) -> dict:
 def cumulative(df: pd.DataFrame, s: CopSettings = CopSettings()) -> pd.DataFrame:
     """Running COP from the first row (nowy_skumulowane4.py / skumulowany_5najnowszy.py).
 
-    As in those scripts, the constant power is added on exhaust rows only.
+    As in those scripts, the constant power is added on exhaust rows only; in corrected mode on
+    every row of the cycle, as the block scripts did.
     """
     heat, power = _masks(df)
-    q = np.where(heat, s.flow * df["delta_i"] * df["dt_h"], 0.0)
+    dt = dt_hours(df, s)
+    q = np.where(heat, s.flow * df["delta_i"] * dt, 0.0)
     p = df["Moc_Czynna"] / 1000.0
-    w_total = np.where(power, (p + (df["wywiew"] == 1) * s.aux_kw) * df["dt_h"], 0.0)
-    w = np.where(power, p * df["dt_h"], 0.0)
+    aux_rows = 1.0 if s.corrected else (df["wywiew"] == 1)
+    w_total = np.where(power, (p + aux_rows * s.aux_kw) * dt, 0.0)
+    w = np.where(power, p * dt, 0.0)
 
     out = pd.DataFrame(index=df.index)
     out["hours"] = (df.index - df.index[0]).total_seconds() / 3600

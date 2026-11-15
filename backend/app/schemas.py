@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -6,7 +7,9 @@ Num = float | None
 
 
 class CopParams(BaseModel):
-    flow: float = Field(0.389, gt=0, le=5, description="factor in Q = flow * (i2 - i3)")
+    mode: Literal["scripts", "corrected"] = Field(
+        "scripts", description="'scripts' reproduces the original scripts, 'corrected' fixes their slips")
+    flow: float | None = Field(None, gt=0, le=5, description="factor in Q = flow * (i2 - i3); null = default of the mode")
     aux_kw: float = Field(0.45, ge=0, le=5, description="fan + automation power, kW")
     min_setpoint: float = Field(0.20, ge=0, le=1)
     cop_min: float = Field(1.5, ge=0)

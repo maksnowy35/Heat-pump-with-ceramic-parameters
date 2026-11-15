@@ -46,8 +46,8 @@ def _info(ds: store.Dataset) -> DatasetInfo:
 
 
 def _settings(p: CopParams) -> cop.CopSettings:
-    return cop.CopSettings(flow=p.flow, aux_kw=p.aux_kw, min_setpoint=p.min_setpoint,
-                           cop_min=p.cop_min, cop_max=p.cop_max)
+    return cop.settings(p.mode, flow=p.flow, aux_kw=p.aux_kw, min_setpoint=p.min_setpoint,
+                        cop_min=p.cop_min, cop_max=p.cop_max)
 
 
 def _window(df: pd.DataFrame, start, minutes: float) -> pd.DataFrame:

@@ -115,3 +115,10 @@ def test_cop_vs_tout():
     temps = [p["t_out"] for p in pts]
     assert temps == sorted(temps)
     assert pts[0]["cop_total"] > pts[-1]["cop_total"]
+
+
+def test_corrected_mode_through_the_api():
+    body = {"start": "2025-02-22T08:24:58", "minutes": 30}
+    a = client.post(f"{API}/datasets/demo/blocks", json=body).json()["summary"]
+    b = client.post(f"{API}/datasets/demo/blocks", json={**body, "cop": {"mode": "corrected"}}).json()["summary"]
+    assert b["cop"] / a["cop"] == pytest.approx(0.468 / 0.389, rel=0.03)

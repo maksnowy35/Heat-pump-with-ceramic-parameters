@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from . import r290
-from .cop import CopSettings, _masks
+from .cop import CopSettings, _masks, dt_hours
 
 
 def cycle_start(df: pd.DataFrame, start) -> pd.Timestamp | None:
@@ -26,7 +26,7 @@ def series(df: pd.DataFrame, start, minutes: float, s: CopSettings = CopSettings
     if w.empty:
         return w
     heat, power = _masks(w)
-    dt = w["dt_h"].where(w.index > w.index[0], 0.0)     # the window starts at its first row
+    dt = dt_hours(w, s).where(w.index > w.index[0], 0.0)     # the window starts at its first row
     q = np.where(heat, s.flow * w["delta_i"] * dt, 0.0)
     e = np.where(power, w["Moc_Czynna"] / 1000 * dt, 0.0)
     e_total = e + np.where(power, s.aux_kw * dt, 0.0)
@@ -50,7 +50,7 @@ def series(df: pd.DataFrame, start, minutes: float, s: CopSettings = CopSettings
 def cycle_totals(w: pd.DataFrame, s: CopSettings = CopSettings()) -> dict:
     """Heat, energy and COP over the rows of a window (one cycle for the 120 s view)."""
     heat, power = _masks(w)
-    dt = w["dt_h"].where(w.index > w.index[0], 0.0)
+    dt = dt_hours(w, s).where(w.index > w.index[0], 0.0)
     q = float(np.where(heat, s.flow * w["delta_i"] * dt, 0).sum())
     e = float(np.where(power, w["Moc_Czynna"] / 1000 * dt, 0).sum())
     e_total = e + float(np.where(power, s.aux_kw * dt, 0).sum())
