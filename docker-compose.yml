@@ -1,0 +1,19 @@
+services:
+  api:
+    build: ./backend
+    restart: unless-stopped
+    # To talk to the real controller instead of the simulated one, pass the serial port through:
+    # devices:
+    #   - /dev/ttyUSB0:/dev/ttyUSB0
+    # environment:
+    #   MODBUS_PORT: /dev/ttyUSB0
+    #   MODBUS_PARITY: N
+    #   MODBUS_ALLOW_WRITE: "0"
+
+  web:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
