@@ -1,0 +1,80 @@
+<header class="head">
+  <h1>The unit and how it was measured</h1>
+  <p>
+    A compact ventilation unit with no outdoor part: one reversible radial fan moves the air alternately in and out through a
+    bed of ceramic honeycomb blocks, and an R290 heat pump is built into the same casing. Only the intake/outlet shows on
+    the façade, and no condensate drain is needed – the moisture leaves with the exhaust air.
+  </p>
+</header>
+
+<section class="split">
+  <div>
+    <h2>Air side and measuring points</h2>
+    <p class="note">Laid out after Fig. 1 of the thesis. Point at a sensor to see what it logs; switch the half-cycle.</p>
+    <app-unit-schematic />
+  </div>
+  <div>
+    <h2>Refrigerant circuit</h2>
+    <p class="note">Heating mode. R290, 800 g charge; compressor with an inverter, 4-way valve, electronic expansion valve (AKV), one receiver.</p>
+    <app-refrigerant-schematic />
+    <h3>Operating variants</h3>
+    <ol class="variants">
+      <li>Compressor runs in the supply half-cycle with refrigerant through the condenser and the evaporator; off in the exhaust half-cycle.</li>
+      <li>Compressor runs in the supply half-cycle with refrigerant through the evaporator only; off in the exhaust half-cycle.</li>
+      <li>As 1, and in the exhaust half-cycle the compressor runs under PID control, 20–90 % (the measured campaign: about 50 %).</li>
+    </ol>
+  </div>
+</section>
+
+<section class="section split">
+  <div>
+    <h2>One cycle</h2>
+    <p>
+      The fan never stops; a guide vane turns the flow, which takes 4 s, so each reversal has a 2 s dwell. The logger
+      marks the half-cycles with the <code>nawiew</code> and <code>wywiew</code> flags. Heat is counted only in the
+      supply half-cycle, electrical energy over the whole cycle – one 120 s cycle is one COP block.
+    </p>
+    <app-cycle-timeline />
+  </div>
+  <div>
+    <h2>Ceramic regenerator</h2>
+    <p>
+      Two rows of 15 blocks, 150 × 150 mm each, with 60 × 60 square channels; the rows are 19 mm apart and stand on thin
+      metal tubes. The ceramic stores the heat of the exhaust air for the next supply half-cycle and, being porous,
+      adsorbs the moisture instead of letting it condense.
+    </p>
+    <app-ceramic-block />
+    <table class="data">
+      <thead><tr><th class="l">Row</th><th>Blocks</th><th>Size [mm]</th><th>Mass each [kg]</th></tr></thead>
+      <tbody>
+        <tr><td class="l">top</td><td>15</td><td>150 × 150 × 300</td><td>6.15</td></tr>
+        <tr><td class="l">bottom</td><td>15</td><td>150 × 150 × 74</td><td>1.39</td></tr>
+        <tr><td class="l">total</td><td>30</td><td></td><td>113.1 kg · 99.5 kJ/K</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Channel 2.216 mm, wall 0.277 mm. <a routerLink="/regenerator">Open the regenerator calculator →</a></p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>From sensor to COP</h2>
+  <app-measurement-chain />
+</section>
+
+<section class="section">
+  <h2>Instruments</h2>
+  <div class="table-wrap">
+    <table class="data instruments">
+      <thead><tr><th class="l">Quantity</th><th class="l">Instrument</th><th class="l">Limit error</th><th class="l">Standard uncertainty</th></tr></thead>
+      <tbody>
+        @for (i of instruments; track i.quantity) {
+          <tr><td class="l">{{ i.quantity }}</td><td class="l">{{ i.instrument }}</td><td class="l">{{ i.limit }}</td><td class="l">{{ i.u }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    With these instruments the expanded uncertainty of the heating capacity is ±8.9 % (k = 2), dominated by the air flow and
+    the humidity.
+  </p>
+</section>

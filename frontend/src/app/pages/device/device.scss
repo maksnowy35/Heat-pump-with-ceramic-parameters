@@ -1,0 +1,53 @@
+.head {
+  margin-bottom: 1.6rem;
+
+  h1 {
+    font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+    font-weight: 600;
+  }
+
+  p {
+    color: var(--steel);
+    max-width: 85ch;
+    margin: 0;
+  }
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+
+  @media (max-width: 1000px) {
+    grid-template-columns: 1fr;
+  }
+
+  p {
+    max-width: 75ch;
+  }
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.3rem;
+}
+
+.variants {
+  font-size: 0.9rem;
+  padding-left: 1.2rem;
+  margin: 0;
+
+  li {
+    margin-bottom: 0.25rem;
+  }
+}
+
+app-ceramic-block {
+  display: block;
+  margin: 0.6rem 0 0.8rem;
+}
+
+.instruments td {
+  font-variant-numeric: normal;
+}

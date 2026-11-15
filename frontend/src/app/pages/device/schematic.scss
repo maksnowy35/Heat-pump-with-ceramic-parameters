@@ -1,0 +1,346 @@
+:host {
+  display: block;
+}
+
+svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  font-family: 'Barlow', system-ui, sans-serif;
+}
+
+.bar {
+  margin-bottom: 0.4rem;
+}
+
+.housing {
+  fill: #f6f7f6;
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.wall {
+  fill: #d8dcda;
+  stroke: var(--steel);
+}
+
+.zone {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  fill: var(--steel);
+  font-weight: 600;
+}
+
+.hx rect,
+rect.hx {
+  fill: #e4ecf2;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.hx line,
+.fin {
+  stroke: #8aa3b5;
+  stroke-width: 1;
+}
+
+.partition {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.block {
+  fill: #e7dcc9;
+  stroke: #9c8661;
+  stroke-width: 1.2;
+}
+
+.fan {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.fan-blades {
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.duct {
+  fill: #eef0ef;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.filter {
+  fill: #c9cdcb;
+  stroke: var(--steel);
+}
+
+.opening {
+  fill: var(--paper);
+  stroke: var(--ink);
+}
+
+.cap {
+  font-size: 12px;
+  fill: var(--ink);
+  text-anchor: middle;
+
+  &.sub {
+    font-size: 11px;
+    fill: var(--steel);
+  }
+
+  &.muted {
+    font-style: italic;
+  }
+
+  &.l {
+    text-anchor: start;
+  }
+
+  &.r {
+    text-anchor: end;
+  }
+}
+
+.lbl {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+
+.flow {
+  fill: none;
+  stroke-width: 3;
+
+  &.s {
+    stroke: var(--frost);
+    stroke-dasharray: 10 6;
+    animation: dash 0.9s linear infinite;
+  }
+
+  &.e {
+    stroke: var(--signal);
+    stroke-dasharray: 10 6;
+    animation: dash 0.9s linear infinite;
+  }
+}
+
+.ah-s {
+  fill: var(--frost);
+}
+
+.ah-e {
+  fill: var(--signal);
+}
+
+.ah-r {
+  fill: var(--ink);
+}
+
+.flowlbl {
+  font-size: 12px;
+  font-weight: 600;
+
+  &.s {
+    fill: var(--frost);
+  }
+
+  &.e {
+    fill: var(--signal);
+  }
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow.s,
+  .flow.e {
+    animation: none;
+  }
+}
+
+.sensor,
+.probe {
+  cursor: pointer;
+  outline: none;
+
+  circle {
+    fill: var(--panel);
+    stroke: var(--ochre);
+    stroke-width: 2;
+  }
+
+  line {
+    stroke: var(--ochre);
+    stroke-width: 1.5;
+  }
+
+  text {
+    font-size: 11px;
+    font-weight: 600;
+    text-anchor: middle;
+    fill: var(--ink);
+  }
+
+  &.on circle,
+  &:focus-visible circle {
+    fill: var(--ochre);
+  }
+}
+
+.explain {
+  font-size: 0.9rem;
+  margin: 0.4rem 0 0.2rem;
+  max-width: 70ch;
+}
+
+.sensor-text {
+  font-size: 0.86rem;
+  color: var(--steel);
+  min-height: 2.6em;
+  margin: 0.2rem 0 0;
+  border-left: 3px solid var(--ochre);
+  padding-left: 0.6rem;
+}
+
+/* refrigerant circuit */
+.pipe {
+  fill: none;
+  stroke-width: 3;
+
+  &.hot {
+    stroke: var(--signal);
+  }
+
+  &.liquid {
+    stroke: var(--ochre);
+  }
+
+  &.cold {
+    stroke: var(--frost);
+  }
+}
+
+.comp {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+}
+
+.comp-sym {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+.box {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 1.3;
+}
+
+.valve-x {
+  stroke: var(--ink);
+  stroke-width: 1.3;
+}
+
+.wire {
+  stroke: var(--steel);
+  stroke-dasharray: 3 3;
+}
+
+.recv {
+  fill: #f3ead6;
+  stroke: var(--ink);
+  stroke-width: 1.3;
+}
+
+.eev {
+  fill: #fff;
+  stroke: var(--ink);
+  stroke-width: 1.3;
+}
+
+.cold-hx {
+  fill: #e4ecf2;
+  stroke: var(--ink);
+  stroke-width: 1.4;
+}
+
+/* cycle timeline */
+.grid {
+  stroke: var(--rule);
+}
+
+.axis {
+  stroke: var(--steel);
+}
+
+.tick {
+  font-size: 11px;
+  fill: var(--steel);
+  text-anchor: middle;
+}
+
+.side {
+  font-size: 12px;
+  fill: var(--ink);
+  text-anchor: end;
+}
+
+.lbl.s {
+  fill: var(--frost);
+  text-anchor: middle;
+}
+
+.lbl.e {
+  fill: var(--signal);
+  text-anchor: middle;
+}
+
+.lbl.small {
+  font-size: 10px;
+  font-weight: 400;
+  fill: var(--steel);
+  text-anchor: middle;
+}
+
+.flag {
+  &.s {
+    fill: rgba(26, 120, 189, 0.3);
+  }
+
+  &.e {
+    fill: rgba(180, 69, 47, 0.3);
+  }
+}
+
+.count {
+  &.q {
+    fill: rgba(63, 138, 58, 0.35);
+  }
+
+  &.w {
+    fill: rgba(200, 162, 74, 0.35);
+  }
+}
+
+.in {
+  font-size: 11px;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+
+/* timeline flow line is a plain stroke */
+.flow:not(.s):not(.e) {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  fill: none;
+}
