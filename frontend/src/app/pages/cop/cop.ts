@@ -4,8 +4,9 @@ import { catchError, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 
 import { Api } from '../../core/api';
 import { Datasets } from '../../core/datasets';
+import { Mode } from '../../core/mode';
 import { errorMessage, fix, num, stamp } from '../../core/format';
-import { BlocksResponse, CopTPoint, DEFAULT_COP } from '../../core/models';
+import { BlocksResponse, CopTPoint } from '../../core/models';
 import { COP_COLOR, COP_TOTAL_COLOR, POWER_COLOR, STEEL } from '../../core/palette';
 import { Selection } from '../../core/selection';
 import { ChartView, Series, steps } from '../../shared/chart';
@@ -29,19 +30,20 @@ type Result<T> = { state: 'loading' } | { state: 'ok'; data: T } | { state: 'err
 export class CopPage {
   private api = inject(Api);
   readonly ds = inject(Datasets);
+  readonly calc = inject(Mode);
   readonly sel = inject(Selection);
 
   readonly num = num;
   readonly fix = fix;
   readonly stamp = stamp;
 
-  private request = computed(() => ({ id: this.ds.selectedId(), start: this.sel.start(), minutes: this.sel.minutes() }));
+  private request = computed(() => ({ id: this.ds.selectedId(), start: this.sel.start(), minutes: this.sel.minutes(), cop: this.calc.cop() }));
 
   result = toSignal(
     toObservable(this.request).pipe(
       debounceTime(150),
       switchMap(r =>
-        this.api.blocks(r.id, r.start, r.minutes, DEFAULT_COP).pipe(
+        this.api.blocks(r.id, r.start, r.minutes, r.cop).pipe(
           map(data => ({ state: 'ok', data }) as Result<BlocksResponse>),
           catchError(err => of({ state: 'error', message: errorMessage(err) } as Result<BlocksResponse>)),
           startWith({ state: 'loading' } as Result<BlocksResponse>),
@@ -73,10 +75,10 @@ export class CopPage {
   });
 
   // COP against outdoor temperature, one point per steady window
-  private recordKey = computed(() => `${this.ds.selectedId()}|${this.ds.selected()?.missing_flags ?? ''}`);
+  private recordKey = computed(() => `${this.ds.selectedId()}|${this.ds.selected()?.missing_flags ?? ''}|${this.calc.mode()}`);
   copT = toSignal(
     toObservable(this.recordKey).pipe(
-      switchMap(() => this.api.copVsTout(this.ds.selectedId(), DEFAULT_COP).pipe(catchError(() => of([] as CopTPoint[])))),
+      switchMap(() => this.api.copVsTout(this.ds.selectedId(), this.calc.cop()).pipe(catchError(() => of([] as CopTPoint[])))),
     ),
     { initialValue: [] as CopTPoint[] },
   );

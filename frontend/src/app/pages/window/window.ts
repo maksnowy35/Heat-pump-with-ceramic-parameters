@@ -4,8 +4,9 @@ import { catchError, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 
 import { Api } from '../../core/api';
 import { Datasets } from '../../core/datasets';
+import { Mode } from '../../core/mode';
 import { errorMessage, fix } from '../../core/format';
-import { DEFAULT_COP, WindowResponse } from '../../core/models';
+import { WindowResponse } from '../../core/models';
 import {
   COP_COLOR, COP_TOTAL_COLOR, DISCHARGE_COLOR, OCHRE, POWER_COLOR, STEEL, SUCTION_COLOR,
 } from '../../core/palette';
@@ -30,16 +31,17 @@ const I = ['i_1', 'i_2', 'i_3', 'i_4', 'i_5'];
 export class WindowPage {
   private api = inject(Api);
   readonly ds = inject(Datasets);
+  readonly calc = inject(Mode);
   readonly sel = inject(Selection);
   readonly fix = fix;
 
-  private request = computed(() => ({ id: this.ds.selectedId(), start: this.sel.start(), minutes: this.sel.minutes() }));
+  private request = computed(() => ({ id: this.ds.selectedId(), start: this.sel.start(), minutes: this.sel.minutes(), cop: this.calc.cop() }));
 
   result = toSignal(
     toObservable(this.request).pipe(
       debounceTime(150),
       switchMap(r =>
-        this.api.window(r.id, r.start, r.minutes, DEFAULT_COP).pipe(
+        this.api.window(r.id, r.start, r.minutes, r.cop).pipe(
           map(data => ({ state: 'ok', data }) as Result),
           catchError(err => of({ state: 'error', message: errorMessage(err) } as Result)),
           startWith({ state: 'loading' } as Result),

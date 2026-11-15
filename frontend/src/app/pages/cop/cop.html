@@ -20,6 +20,8 @@
                  [xMin]="0" [xMax]="sel.minutes()" [xStep]="sel.minutes() <= 40 ? 2 : 10" [yMin]="0" [yMax]="14"
                  [y2Min]="0" [y2Max]="5000" [height]="360" ariaLabel="COP in 2-minute blocks" />
       <p class="note">
+        @if (calc.mode() === 'corrected') { One block per cycle, from the start of its supply half-cycle. }
+        @else { Clock-aligned 2-minute blocks, as in the scripts. }
         Solid: trusted block. Dotted: compressor setpoint below 0.20 or COP outside 1.5–12, drawn at the level of the
         previous trusted block.
       </p>

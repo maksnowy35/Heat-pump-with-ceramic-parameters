@@ -1,14 +1,17 @@
 export type Num = number | null;
 
+export type CalcMode = 'scripts' | 'corrected';
+
 export interface CopParams {
-  flow: number;
+  mode: CalcMode;
+  flow: number | null;
   aux_kw: number;
   min_setpoint: number;
   cop_min: number;
   cop_max: number;
 }
 
-export const DEFAULT_COP: CopParams = { flow: 0.389, aux_kw: 0.45, min_setpoint: 0.2, cop_min: 1.5, cop_max: 12 };
+export const DEFAULT_COP: CopParams = { mode: 'scripts', flow: null, aux_kw: 0.45, min_setpoint: 0.2, cop_min: 1.5, cop_max: 12 };
 
 export interface Gap {
   start: string;

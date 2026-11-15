@@ -4,8 +4,9 @@ import { catchError, debounceTime, map, of, startWith, switchMap } from 'rxjs';
 
 import { Api } from '../../core/api';
 import { Datasets } from '../../core/datasets';
+import { Mode } from '../../core/mode';
 import { addMinutes, errorMessage, fix, stamp } from '../../core/format';
-import { DEFAULT_COP, WindowResponse } from '../../core/models';
+import { WindowResponse } from '../../core/models';
 import { DISCHARGE_COLOR, LEAF, POWER_COLOR, SUCTION_COLOR } from '../../core/palette';
 import { points, supplyBands, xAxis } from '../../core/plots';
 import { Selection } from '../../core/selection';
@@ -24,6 +25,7 @@ type Result = { state: 'loading' } | { state: 'ok'; data: WindowResponse } | { s
 export class CyclePage {
   private api = inject(Api);
   readonly ds = inject(Datasets);
+  readonly calc = inject(Mode);
   readonly sel = inject(Selection);
   readonly fix = fix;
   readonly stamp = stamp;
@@ -33,13 +35,13 @@ export class CyclePage {
   offset = signal(0);
   private start = computed(() => addMinutes(this.sel.start(), this.offset() * 2));
 
-  private request = computed(() => ({ id: this.ds.selectedId(), start: this.start(), align: this.align() }));
+  private request = computed(() => ({ id: this.ds.selectedId(), start: this.start(), align: this.align(), cop: this.calc.cop() }));
 
   result = toSignal(
     toObservable(this.request).pipe(
       debounceTime(100),
       switchMap(r =>
-        this.api.window(r.id, r.start, 2, DEFAULT_COP, r.align).pipe(
+        this.api.window(r.id, r.start, 2, r.cop, r.align).pipe(
           map(data => ({ state: 'ok', data }) as Result),
           catchError(err => of({ state: 'error', message: errorMessage(err) } as Result)),
           startWith({ state: 'loading' } as Result),

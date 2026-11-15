@@ -4,8 +4,9 @@ import { catchError, map, of, startWith, switchMap } from 'rxjs';
 
 import { Api } from '../../core/api';
 import { Datasets } from '../../core/datasets';
+import { Mode } from '../../core/mode';
 import { errorMessage, fix } from '../../core/format';
-import { CumulativeResponse, DEFAULT_COP } from '../../core/models';
+import { CumulativeResponse } from '../../core/models';
 import {
   COP_COLOR, COP_TOTAL_COLOR, DISCHARGE_COLOR, FROST, SIGNAL, STEEL, SUCTION_COLOR, withAlpha,
 } from '../../core/palette';
@@ -24,7 +25,7 @@ type Result = { state: 'loading' } | { state: 'ok'; data: CumulativeResponse } |
     @if (error(); as e) { <p class="error">{{ e }}</p> }
     @if (data(); as c) {
       <header class="readout">
-        <p class="big">COP {{ fix(c.final_cop_total) }} <small>over the whole record, as the scripts sum it</small></p>
+        <p class="big">COP {{ fix(c.final_cop_total) }} <small>over the whole record{{ calc.mode() === 'scripts' ? ', as the scripts sum it' : '' }}</small></p>
         <p>{{ fix(c.final_cop) }} for the compressor alone · {{ c.off.length }} long compressor stop{{ c.off.length === 1 ? '' : 's' }} · {{ c.gaps.length }} logging gap{{ c.gaps.length === 1 ? '' : 's' }}</p>
       </header>
       <div class="figure">
@@ -54,14 +55,15 @@ type Result = { state: 'loading' } | { state: 'ok'; data: CumulativeResponse } |
 export class OverviewPage {
   private api = inject(Api);
   readonly ds = inject(Datasets);
+  readonly calc = inject(Mode);
   readonly fix = fix;
 
-  private key = computed(() => `${this.ds.selectedId()}|${this.ds.selected()?.missing_flags ?? ''}`);
+  private key = computed(() => `${this.ds.selectedId()}|${this.ds.selected()?.missing_flags ?? ''}|${this.calc.mode()}`);
 
   result = toSignal(
     toObservable(this.key).pipe(
       switchMap(() =>
-        this.api.cumulative(this.ds.selectedId(), DEFAULT_COP).pipe(
+        this.api.cumulative(this.ds.selectedId(), this.calc.cop()).pipe(
           map(data => ({ state: 'ok', data }) as Result),
           catchError(err => of({ state: 'error', message: errorMessage(err) } as Result)),
           startWith({ state: 'loading' } as Result),

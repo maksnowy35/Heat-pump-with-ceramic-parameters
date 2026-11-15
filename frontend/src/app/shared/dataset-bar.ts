@@ -1,10 +1,13 @@
 import { Component, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { Datasets } from '../core/datasets';
 import { eventText, pct, stamp } from '../core/format';
+import { Mode } from '../core/mode';
 
 @Component({
   selector: 'app-dataset-bar',
+  imports: [RouterLink],
   template: `
     <section class="ds" aria-label="Record">
       <label class="pick">
@@ -19,6 +22,16 @@ import { eventText, pct, stamp } from '../core/format';
         <input type="file" multiple accept=".xlsx,.xls,.csv" (change)="pick($event)" [disabled]="state.uploading()">
         <span>{{ state.uploading() ? 'Reading…' : 'Load reports (.xlsx / .csv)' }}</span>
       </label>
+      <div class="mode">
+        <span>Calculation</span>
+        <div class="segmented" role="group" aria-label="Calculation mode">
+          <button type="button" [class.on]="calc.mode() === 'scripts'" (click)="calc.mode.set('scripts')"
+                  title="flow 0.389, constant power as each script added it, clock-aligned 2-min blocks">as in the scripts</button>
+          <button type="button" [class.on]="calc.mode() === 'corrected'" (click)="calc.mode.set('corrected')"
+                  title="mass flow 0.468 kg/s, constant power over the whole cycle, time step capped after gaps, blocks per cycle">corrected</button>
+        </div>
+        <a routerLink="/model" fragment="audit">what differs?</a>
+      </div>
       @if (state.selected(); as d) {
         <p class="facts">
           @if (d.source === 'demo') { <b class="badge">synthetic</b> }
@@ -41,6 +54,11 @@ import { eventText, pct, stamp } from '../core/format';
     .upload span { display: inline-block; padding: 0.3rem 0.7rem; border: 1px dashed var(--steel); border-radius: var(--radius); }
     .upload:hover span { border-color: var(--ink); }
     .upload:focus-within span { outline: 2px solid var(--frost); outline-offset: 2px; }
+    .mode { display: flex; align-items: center; gap: 0.5rem; margin-left: auto; font-size: 0.9rem; }
+    .mode > span { font-family: var(--font-display); font-weight: 600; }
+    .mode .segmented { margin: 0; }
+    .mode .segmented button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+    .mode a { font-size: 0.8rem; }
     .facts { margin: 0; font-size: 0.85rem; color: var(--steel); flex-basis: 100%; }
     .badge { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--paper);
              background: var(--ochre); padding: 0.05rem 0.4rem; border-radius: 3px; margin-right: 0.3rem; }
@@ -50,6 +68,7 @@ import { eventText, pct, stamp } from '../core/format';
 })
 export class DatasetBar {
   readonly state = inject(Datasets);
+  readonly calc = inject(Mode);
   readonly stamp = stamp;
   readonly pct = pct;
   readonly text = eventText;
